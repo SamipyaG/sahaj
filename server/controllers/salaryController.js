@@ -2,17 +2,14 @@ import Salary from '../models/Salary.js';
 import Employee from '../models/Employee.js';
 import Designation from '../models/Designation.js';
 
-// Function to calculate the number of months since joining
 const calculateMonthsSinceJoining = (joinDate) => {
     const join = new Date(joinDate);
     const now = new Date();
     return (now.getFullYear() - join.getFullYear()) * 12 + (now.getMonth() - join.getMonth());
 };
 
-// Function to calculate tax based on annual salary
 const calculateTax = (annualSalary) => {
-    if (annualSalary <= 500000) return 0; // No tax for salaries below 500,000
-
+    if (annualSalary <= 500000) return 0;
     let tax = 0, remainingSalary = annualSalary;
 
     if (remainingSalary > 2000000) {
@@ -30,134 +27,108 @@ const calculateTax = (annualSalary) => {
     if (remainingSalary > 500000) {
         tax += (remainingSalary - 500000) * 0.10;
     }
-
     return tax;
 };
 
-// Automatically generate and pay salary slips for all employees
 const autoPaySalaries = async (req, res) => {
     try {
-        // Fetch all employees and their designations
         const employees = await Employee.find().populate('designation_id');
+        const usedSalaryIds = new Set();
 
         for (const employee of employees) {
             const { _id: employee_id, designation_id, join_date } = employee;
-            const { basic_salary } = designation_id;
-
-            // Ensure deductions are properly fetched
-            const existingSalary = await Salary.findOne({ employee_id });
-            const deductions = existingSalary ? existingSalary.deductions : 0;
-
-            // Calculate months since joining
             const monthsSinceJoining = calculateMonthsSinceJoining(join_date);
 
             for (let i = 0; i < monthsSinceJoining; i++) {
-                // Calculate gross and net salary
-                const grossAnnualSalary = (basic_salary - deductions) * 12;
-                const annualTax = calculateTax(grossAnnualSalary);
-                const monthlyTax = annualTax / 12;
-                const netSalary = (basic_salary - deductions) - monthlyTax;
-
-                // Determine pay date for the month
                 const payDate = new Date(join_date);
                 payDate.setMonth(payDate.getMonth() + i + 1);
 
-                // Check if salary for this month already exists
-                const existingSalarySlip = await Salary.findOne({
+                const existingSalary = await Salary.findOne({
                     employee_id,
-                    pay_date: { $gte: new Date(payDate.getFullYear(), payDate.getMonth(), 1) },
+                    Paydate: { $gte: new Date(payDate.getFullYear(), payDate.getMonth(), 1) },
                 });
 
-                if (!existingSalarySlip) {
+                if (!existingSalary) {
+                    // Generate unique salary_id
+                    let salary_id;
+                    do {
+                        salary_id = Math.floor(100000 + Math.random() * 900000);
+                    } while (usedSalaryIds.has(salary_id));
+                    usedSalaryIds.add(salary_id);
+
                     const newSalary = new Salary({
                         employee_id,
                         designation_id: designation_id._id,
-                        basic_salary,
-                        deductions,
-                        net_salary: netSalary,
-                        pay_date: payDate
+                        salary_id,
+                        Paydate: payDate
                     });
                     await newSalary.save();
                 }
             }
         }
-
         return res.status(200).json({ success: true, message: "Salary slips generated successfully" });
-
     } catch (error) {
         console.error(error.message);
         return res.status(500).json({ success: false, error: "Error auto-paying salaries" });
     }
 };
 
-// Add a new salary entry (for manual addition)
 const addSalary = async (req, res) => {
     try {
-        const { employee_id, pay_date } = req.body;
-
+        const { employee_id, Paydate } = req.body;
         const employee = await Employee.findById(employee_id).populate('designation_id');
         if (!employee) return res.status(404).json({ success: false, error: "Employee not found" });
 
-        const { basic_salary } = employee.designation_id;
+        // Generate unique salary_id
+        const usedIds = await Salary.distinct('salary_id');
+        let salary_id;
+        do {
+            salary_id = Math.floor(100000 + Math.random() * 900000);
+        } while (usedIds.includes(salary_id));
 
-        // Ensure deductions are properly fetched
-        const existingSalary = await Salary.findOne({ employee_id });
-        const deductions = existingSalary ? existingSalary.deductions : 0;
-
-        // Calculate net salary
-        const grossAnnualSalary = (basic_salary - deductions) * 12;
-        const annualTax = calculateTax(grossAnnualSalary);
-        const monthlyTax = annualTax / 12;
-        const netSalary = (basic_salary - deductions) - monthlyTax;
-
-        // Check if salary already exists for this pay date
-        const existingSalarySlip = await Salary.findOne({
+        const existingSalary = await Salary.findOne({
             employee_id,
-            pay_date: { $gte: new Date(pay_date) },
+            Paydate: { $gte: new Date(Paydate) },
         });
 
-        if (existingSalarySlip) {
+        if (existingSalary) {
             return res.status(400).json({ success: false, error: "Salary slip already exists for this period" });
         }
 
-        // Create new salary entry
         const newSalary = new Salary({
             employee_id,
             designation_id: employee.designation_id._id,
-            basic_salary,
-            deductions,
-            net_salary: netSalary,
-            pay_date
+            salary_id,
+            Paydate
         });
 
         await newSalary.save();
-
         return res.status(200).json({
             success: true,
             message: "Salary added successfully",
-            salary: newSalary,
-            netSalary,
-            monthlyTax
+            salary: newSalary
         });
-
     } catch (error) {
         console.error(error.message);
         return res.status(500).json({ success: false, error: "Error adding salary" });
     }
 };
 
-// Get salary history for an employee
 const getSalary = async (req, res) => {
     try {
         const { id } = req.params;
-        const employee = await Employee.findById(id).populate('designation_id');
+        const salaryRecords = await Salary.find({ employee_id: id })
+            .sort({ Paydate: -1 })
+            .populate('employee_id', 'employeeId')
+            .populate('designation_id', 'name basic_salary');
 
-        if (!employee) return res.status(404).json({ success: false, error: "Employee not found" });
-
-        const salaryRecords = await Salary.find({ employee_id: id }).sort({ pay_date: -1 });
-
-        return res.status(200).json({ success: true, salaryRecords });
-
+        return res.status(200).json({ 
+            success: true, 
+            salary: salaryRecords.map(record => ({
+                ...record.toObject(),
+                net_salary: record.net_salary // Include virtual field
+            }))
+        });
     } catch (error) {
         console.error(error.message);
         return res.status(500).json({ success: false, error: "Error fetching salary records" });

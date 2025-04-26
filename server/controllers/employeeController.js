@@ -228,30 +228,36 @@ const getEmployee = async (req, res) => {
   }
 };
 
+
 // Update employee
 const updateEmployee = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
 
-    // Remove restricted fields
-    delete updates.employee_id;
-    delete updates.user_id;
-    delete updates.join_date;
+    // Create a filtered updates object with proper field mapping
+    const allowedUpdates = {};
+    const updatableFields = ['employee_name', 'marital_status', 'designation_id', 'department_id'];
+    
+    // Map frontend fields to backend fields
+    if (updates.name) allowedUpdates.employee_name = updates.name;
+    if (updates.maritalStatus) allowedUpdates.marital_status = updates.maritalStatus;
+    if (updates.designation) allowedUpdates.designation_id = updates.designation;
+    if (updates.department) allowedUpdates.department_id = updates.department;
 
     // Update user if name changed
-    if (updates.employee_name) {
+    if (allowedUpdates.employee_name) {
       const employee = await Employee.findById(id);
       if (employee) {
         await User.findByIdAndUpdate(employee.user_id, {
-          name: updates.employee_name
+          name: allowedUpdates.employee_name
         });
       }
     }
 
     const updatedEmployee = await Employee.findByIdAndUpdate(
       id,
-      updates,
+      allowedUpdates,
       { new: true, runValidators: true }
     )
     .populate('department_id', 'department_name')
@@ -281,7 +287,6 @@ const updateEmployee = async (req, res) => {
     });
   }
 };
-
 // Get employees by department
 const fetchEmployeesByDepId = async (req, res) => {
   try {
