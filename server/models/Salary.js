@@ -21,7 +21,12 @@ const salarySchema = new Schema(
     Paydate: { 
       type: Date, 
       required: true 
-    }
+    },
+    tax:
+  {
+    type:Number,
+    require:true
+  }
   },
   { 
     timestamps: true,

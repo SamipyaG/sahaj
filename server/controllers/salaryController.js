@@ -1,13 +1,9 @@
 import Salary from '../models/Salary.js';
 import Employee from '../models/Employee.js';
 import Designation from '../models/Designation.js';
+import cron from 'node-cron';
 
-const calculateMonthsSinceJoining = (joinDate) => {
-    const join = new Date(joinDate);
-    const now = new Date();
-    return (now.getFullYear() - join.getFullYear()) * 12 + (now.getMonth() - join.getMonth());
-};
-
+// Calculate tax based on annual salary (using your existing logic)
 const calculateTax = (annualSalary) => {
     if (annualSalary <= 500000) return 0;
     let tax = 0, remainingSalary = annualSalary;
@@ -30,109 +26,121 @@ const calculateTax = (annualSalary) => {
     return tax;
 };
 
-const autoPaySalaries = async (req, res) => {
+// Generate monthly salaries for all eligible employees
+const generateMonthlySalaries = async () => {
     try {
-        const employees = await Employee.find().populate('designation_id');
-        const usedSalaryIds = new Set();
+        console.log('Running monthly salary generation...');
+        const employees = await Employee.find({ active: true }).populate('designation_id');
+        const usedSalaryIds = new Set(await Salary.distinct('salary_id'));
+        const currentDate = new Date();
+        const currentMonth = currentDate.getMonth();
+        const currentYear = currentDate.getFullYear();
 
         for (const employee of employees) {
             const { _id: employee_id, designation_id, join_date } = employee;
-            const monthsSinceJoining = calculateMonthsSinceJoining(join_date);
+            
+            // Skip if employee hasn't joined yet or has no designation
+            if (new Date(join_date) > currentDate || !designation_id) continue;
 
-            for (let i = 0; i < monthsSinceJoining; i++) {
-                const payDate = new Date(join_date);
-                payDate.setMonth(payDate.getMonth() + i + 1);
+            // Check if salary already exists for this month
+            const existingSalary = await Salary.findOne({
+                employee_id,
+                Paydate: { 
+                    $gte: new Date(currentYear, currentMonth, 1),
+                    $lt: new Date(currentYear, currentMonth + 1, 1)
+                }
+            });
 
-                const existingSalary = await Salary.findOne({
+            if (!existingSalary) {
+                // Generate unique salary_id
+                let salary_id;
+                do {
+                    salary_id = Math.floor(100000 + Math.random() * 900000);
+                } while (usedSalaryIds.has(salary_id));
+                usedSalaryIds.add(salary_id);
+
+                // Calculate monthly tax (annual tax divided by 12)
+                const annualSalary = designation_id.basic_salary * 12;
+                const monthlyTax = calculateTax(annualSalary) / 12;
+
+                const newSalary = new Salary({
                     employee_id,
-                    Paydate: { $gte: new Date(payDate.getFullYear(), payDate.getMonth(), 1) },
+                    designation_id: designation_id._id,
+                    salary_id,
+                    Paydate: new Date(currentYear, currentMonth, 28), // Pay on 28th
+                    tax: monthlyTax
                 });
 
-                if (!existingSalary) {
-                    // Generate unique salary_id
-                    let salary_id;
-                    do {
-                        salary_id = Math.floor(100000 + Math.random() * 900000);
-                    } while (usedSalaryIds.has(salary_id));
-                    usedSalaryIds.add(salary_id);
-
-                    const newSalary = new Salary({
-                        employee_id,
-                        designation_id: designation_id._id,
-                        salary_id,
-                        Paydate: payDate
-                    });
-                    await newSalary.save();
-                }
+                await newSalary.save();
+                console.log(`Generated salary for employee ${employee_id} for ${currentMonth + 1}/${currentYear}`);
             }
         }
-        return res.status(200).json({ success: true, message: "Salary slips generated successfully" });
+        console.log('Monthly salary generation completed successfully');
     } catch (error) {
-        console.error(error.message);
-        return res.status(500).json({ success: false, error: "Error auto-paying salaries" });
+        console.error('Error in monthly salary generation:', error.message);
     }
 };
 
-const addSalary = async (req, res) => {
+// Initialize the cron job for automatic salary payment
+const initSalaryCronJob = () => {
+    // Schedule to run at 9:00 AM on the 28th day of every month
+    cron.schedule('0 9 28 * *', () => {
+        console.log('Running scheduled salary payment...');
+        generateMonthlySalaries();
+    }, {
+        scheduled: true,
+        timezone: "Asia/Kolkata" // Adjust to your timezone
+    });
+    
+    console.log('Salary cron job initialized - will run on 28th of each month');
+};
+
+// Get all salary records for a specific employee
+const getEmployeeSalaries = async (req, res) => {
     try {
-        const { employee_id, Paydate } = req.body;
-        const employee = await Employee.findById(employee_id).populate('designation_id');
-        if (!employee) return res.status(404).json({ success: false, error: "Employee not found" });
+        const { employee_id } = req.params;
 
-        // Generate unique salary_id
-        const usedIds = await Salary.distinct('salary_id');
-        let salary_id;
-        do {
-            salary_id = Math.floor(100000 + Math.random() * 900000);
-        } while (usedIds.includes(salary_id));
-
-        const existingSalary = await Salary.findOne({
-            employee_id,
-            Paydate: { $gte: new Date(Paydate) },
-        });
-
-        if (existingSalary) {
-            return res.status(400).json({ success: false, error: "Salary slip already exists for this period" });
+        // Validate employee_id format
+        if (!mongoose.Types.ObjectId.isValid(employee_id)) {
+            return res.status(400).json({ success: false, error: "Invalid employee ID format" });
         }
 
-        const newSalary = new Salary({
-            employee_id,
-            designation_id: employee.designation_id._id,
-            salary_id,
-            Paydate
-        });
-
-        await newSalary.save();
-        return res.status(200).json({
-            success: true,
-            message: "Salary added successfully",
-            salary: newSalary
-        });
-    } catch (error) {
-        console.error(error.message);
-        return res.status(500).json({ success: false, error: "Error adding salary" });
-    }
-};
-
-const getSalary = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const salaryRecords = await Salary.find({ employee_id: id })
+        const salaryRecords = await Salary.find({ employee_id })
             .sort({ Paydate: -1 })
-            .populate('employee_id', 'employeeId')
-            .populate('designation_id', 'name basic_salary');
+            .populate('employee_id', 'name employeeId')
+            .populate({
+                path: 'designation_id',
+                select: 'name basic_salary'
+            });
+
+        if (!salaryRecords || salaryRecords.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                message: "No salary records found for this employee" 
+            });
+        }
+
+        // Format response with calculated values
+        const formattedSalaries = salaryRecords.map(record => ({
+            salary_id: record.salary_id,
+            pay_date: record.Paydate,
+            basic_salary: record.designation_id.basic_salary,
+            tax_deducted: record.tax,
+            net_salary: record.net_salary, // Virtual field from model
+            designation: record.designation_id.name
+        }));
 
         return res.status(200).json({ 
             success: true, 
-            salary: salaryRecords.map(record => ({
-                ...record.toObject(),
-                net_salary: record.net_salary // Include virtual field
-            }))
+            data: formattedSalaries 
         });
     } catch (error) {
         console.error(error.message);
-        return res.status(500).json({ success: false, error: "Error fetching salary records" });
+        return res.status(500).json({ 
+            success: false, 
+            error: "Error fetching salary records" 
+        });
     }
 };
 
-export { autoPaySalaries, addSalary, getSalary };
+export { initSalaryCronJob, getEmployeeSalaries };
