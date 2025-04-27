@@ -12,7 +12,7 @@ const calculateLeaveDays = (startDate, endDate) => {
 // Add a new leave request
 const addLeave = async (req, res) => {
     try {
-        const { user_id, startDate, endDate, reason } = req.body;
+        const { user_id, leaveType,startDate, endDate, reason } = req.body;
 
         // Find the employee associated with the user
         const employee = await Employee.findOne({ user_id });
@@ -26,8 +26,9 @@ const addLeave = async (req, res) => {
 
         // Create a new leave request
         const newLeave = new Leave({
+            leave_id: "LEAVE-" + Date.now(), // 
             employee_id: employee._id,
-            leave_setup_id: req.body.leave_setup_id, // Assuming this is passed in the request
+            leave_setup_id: req.body.leave_setup_id, 
             startDate,
             endDate,
             reason,
@@ -44,6 +45,7 @@ const addLeave = async (req, res) => {
         return res.status(500).json({ success: false, error: "Server error while adding leave" });
     }
 };
+
 
 // Get leave requests for a specific user or all leaves for admin
 const getLeave = async (req, res) => {
