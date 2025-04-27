@@ -143,4 +143,105 @@ const getEmployeeSalaries = async (req, res) => {
     }
 };
 
-export { initSalaryCronJob, getEmployeeSalaries };
+// inside your controller file (e.g., salaryController.js)
+
+const getOverallSalaryStatus = async (req, res) => {
+    try {
+        const salaryRecords = await Salary.find()
+            .sort({ Paydate: 1 })
+            .select('Paydate employee_id')
+            .populate({
+                path: 'employee_id',
+                select: 'employee_name employee_id',   
+                match: {}, // No need for match here
+            })
+            .lean();
+
+        const paidMonthsMap = {};
+
+        salaryRecords.forEach(record => {
+            if (!record.Paydate) return;
+            const payDate = new Date(record.Paydate);
+            if (isNaN(payDate.getTime())) return;
+
+            const year = payDate.getFullYear();
+            const month = payDate.getMonth() + 1;
+            const monthKey = `${year}-${month}`;
+
+            // SAFETY: Check if employee_id is properly populated
+            if (!record.employee_id || typeof record.employee_id !== 'object') return;
+
+            if (!paidMonthsMap[monthKey]) {
+                paidMonthsMap[monthKey] = {
+                    count: 0,
+                    employees: []
+                };
+            }
+
+            paidMonthsMap[monthKey].count++;
+            paidMonthsMap[monthKey].employees.push({
+                id: record.employee_id._id,
+                name: record.employee_id.employee_name || 'Unknown',
+                employeeId: record.employee_id.employee_id || 'N/A'
+            });
+        });
+
+        const currentDate = new Date();
+        const currentYear = currentDate.getFullYear();
+        const currentMonth = currentDate.getMonth() + 1;
+
+        const monthlyStatus = [];
+
+        for (let i = 0; i < 12; i++) {
+            let checkMonth = currentMonth - i;
+            let checkYear = currentYear;
+
+            if (checkMonth <= 0) {
+                checkMonth += 12;
+                checkYear -= 1;
+            }
+
+            const monthKey = `${checkYear}-${checkMonth}`;
+
+            const formattedDate = `${checkYear}${checkMonth.toString().padStart(2, '0')}01`;
+
+            monthlyStatus.push({
+                year: checkYear,
+                date: formattedDate,
+                monthNumber: checkMonth,
+                paidCount: paidMonthsMap[monthKey]?.count || 0,
+                employees: paidMonthsMap[monthKey]?.employees || [],
+                status: paidMonthsMap[monthKey] ? 'Processed' : 'Pending',
+                sn: 0 
+            });
+        }
+
+        // Sort descending
+        monthlyStatus.sort((a, b) => {
+            if (a.year !== b.year) return b.year - a.year;
+            return b.monthNumber - a.monthNumber;
+        });
+
+        // Assign serial numbers
+        monthlyStatus.forEach((item, index) => {
+            item.sn = index + 1;
+        });
+
+        return res.status(200).json({
+            success: true,
+            data: monthlyStatus
+        });
+    } catch (error) {
+        console.error("Error in getOverallSalaryStatus:", error.message);
+        return res.status(500).json({
+            success: false,
+            error: "Error fetching salary status",
+            details: error.message
+        });
+    }
+};
+
+
+
+
+export { initSalaryCronJob, getEmployeeSalaries, getOverallSalaryStatus };

@@ -12,8 +12,8 @@ import List from "./components/employee/List";
 import Add from "./components/employee/Add";
 import View from "./components/employee/View";
 import Edit from "./components/employee/Edit";
-import AddSalary from "./components/salary/Add";
-import AutomaticSalary from "./components/salary/automatic";
+
+import AutomaticSalary from "./components/salary/OverallSalaryStatus";
 import DesignationAdd from "./components/designation/add";
 import DesignationEdit from "./components/designation/edit";
 import DesignationList from "./components/designation/list";
@@ -74,10 +74,7 @@ function App() {
             element={<ViewSalary />}
           ></Route>
 
-          <Route
-            path="/admin-dashboard/salary/add"
-            element={<AddSalary />}
-          ></Route>
+          
            <Route
             path="/admin-dashboard/salary/automatic"
             element={<AutomaticSalary />}

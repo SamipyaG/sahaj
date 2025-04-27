@@ -32,13 +32,20 @@ const AddLeave = () => {
         const response = await axios.get(
           `http://localhost:5000/api/leave-setup`,
           {
-              headers: {
-                  "Authorization": `Bearer ${localStorage.getItem("token")}`
-              }
+            headers: {
+              "Authorization": `Bearer ${localStorage.getItem("token")}`
+            }
           }
-      );
-      console.log(response.data.leaveTypes)
-        setLeaveTypes(response.data.leaveTypes || []);
+        );
+        
+        const formattedLeaveTypes = response.data.leaveSetups.map((leaveSetup) => ({
+          type: leaveSetup.leaveType,
+          id: leaveSetup._id,
+          maxDays: leaveSetup.maxDays,
+          description: leaveSetup.description || ""
+        }));
+
+        setLeaveTypes(formattedLeaveTypes);
         setError("");
       } catch (err) {
         console.error("Error fetching leave types:", err);
@@ -54,7 +61,7 @@ const AddLeave = () => {
   // Handle leave type selection
   const handleLeaveTypeChange = (e) => {
     const selectedId = e.target.value;
-    const type = leaveTypes.find(t => t._id === selectedId);
+    const type = leaveTypes.find(t => t.id === selectedId);
     setSelectedLeaveType(type);
     setFormData(prev => ({
       ...prev,
@@ -108,7 +115,7 @@ const AddLeave = () => {
     // Validate against max days
     const numOfDays = calculateDays();
     if (selectedLeaveType && numOfDays > selectedLeaveType.maxDays) {
-      setError(`Maximum ${selectedLeaveType.maxDays} days allowed for ${selectedLeaveType.leaveType}`);
+      setError(`Maximum ${selectedLeaveType.maxDays} days allowed for ${selectedLeaveType.type}`);
       return false;
     }
 
@@ -124,7 +131,7 @@ const AddLeave = () => {
     setIsSubmitting(true);
     try {
       const response = await axios.post(
-        "/api/leave/add",
+        "http://localhost:5000/api/leave/add",
         {
           ...formData,
           numOfDays: calculateDays()
@@ -189,12 +196,12 @@ const AddLeave = () => {
             >
               <option value="">-- Select Leave Type --</option>
               {leaveTypes.map((type) => (
-                <option key={type._id} value={type._id}>
-                  {type.leaveType} (Max {type.maxDays} days)
+                <option key={type.id} value={type.id}>
+                  {type.type} (max {type.maxDays} days)
                 </option>
               ))}
             </select>
-            {selectedLeaveType && (
+            {selectedLeaveType && selectedLeaveType.description && (
               <p className="mt-2 text-sm text-gray-500">
                 {selectedLeaveType.description}
               </p>

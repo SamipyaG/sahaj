@@ -93,13 +93,20 @@ const getLeave = async (req, res) => {
 // Get all leave requests (for admin)
 const getLeaves = async (req, res) => {
     try {
-        const leaves = await Leave.find().populate({
-            path: 'employee_id',
-            populate: [
-                { path: 'department_id', select: 'department_name' },
-                { path: 'user_id', select: 'name' }
-            ]
-        });
+        const leaves = await Leave.find().populate([
+            {
+                path: 'employee_id',
+                populate: [
+                    { path: 'department_id', select: 'department_name' },
+                    { path: 'user_id', select: 'name' }
+                ]
+            },
+            {
+                path: 'leave_setup_id',
+                select: 'leaveType' // <-- this will only fetch leave_type from leave_setup
+            }
+        ]);
+        
 
         return res.status(200).json({ success: true, leaves });
     } catch (error) {

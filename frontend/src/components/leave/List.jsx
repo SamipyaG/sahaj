@@ -19,6 +19,7 @@ const List = () => {
           },
         }
       );
+      console.log(response.data)
       if (response.data.success) {
         setLeaves(response.data.leaves);
       }

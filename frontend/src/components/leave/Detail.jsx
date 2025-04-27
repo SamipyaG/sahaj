@@ -62,24 +62,24 @@ const Detail = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <img
-                src={`http://localhost:5000/${leave.employeeId.userId.profileImage}`}
+                src={`http://localhost:5000/${leave.employee_id.user_id.profileImage}`}
                 className="rounded-full border w-72"
               />
             </div>
             <div>
               <div className="flex space-x-3 mb-2">
                 <p className="text-lg font-bold">Name:</p>
-                <p className="font-medium">{leave.employeeId.userId.name}</p>
+                <p className="font-medium">{leave.employee_id.user_id.name}</p>
               </div>
               <div className="flex space-x-3 mb-2">
                 <p className="text-lg font-bold">Employee ID:</p>
-                <p className="font-medium">{leave.employeeId.employeeId}</p>
+                <p className="font-medium">{leave.employee_id.employee_id}</p>
               </div>
 
               <div className="flex space-x-3 mb-2">
                 <p className="text-lg font-bold">LeaveType:</p>
                 <p className="font-medium">
-                  {leave.leaveType}
+                  {leave.leave_setup_id.leaveType}
                 </p>
               </div>
               <div className="flex space-x-3 mb-2">
@@ -89,7 +89,7 @@ const Detail = () => {
 
               <div className="flex space-x-3 mb-2">
                 <p className="text-lg font-bold">Department:</p>
-                <p className="font-medium">{leave.employeeId.department.department_name}</p>
+                <p className="font-medium">{leave.employee_id.department_id.department_name}</p>
               </div>
               <div className="flex space-x-3 mb-2">
                 <p className="text-lg font-bold">Start Date:</p>

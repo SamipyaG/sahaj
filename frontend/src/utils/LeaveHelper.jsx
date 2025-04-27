@@ -8,7 +8,7 @@ export const columns = [
   },
   {
     name: "Emp ID",
-    selector: (row) => row.employeeId,
+    selector: (row) => row.employee_id,
     width: "110px",
   },
   {
