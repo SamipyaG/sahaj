@@ -1,7 +1,0 @@
-{
-  "dependencies": {
-    "mongoose": "^8.14.0",
-    "node-cron": "^3.0.3",
-    "react-toastify": "^11.0.5"
-  }
-}

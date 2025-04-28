@@ -63,7 +63,7 @@ const List = () => {
         <thead className="text-xs text-gray-700 uppercase bg-gray-50 border border-gray-200">
           <tr>
             <th className="px-6 py-3">SNO</th>
-            <th className="px-6 py-3">Leave Type</th>
+            <th className="px-6 py-3">Leave TYpe</th>
             <th className="px-6 py-3">From</th>
             <th className="px-6 py-3">To</th>
             <th className="px-6 py-3">Description</th>
@@ -77,7 +77,7 @@ const List = () => {
               className="bg-white border-b light:bg-gray-800 light:border-gray-700"
             >
               <td className="px-6 py-3">{sno++}</td>
-              <td className="px-6 py-3">{leave.leaveType}</td>
+              <td className="px-6 py-3">{leave.leave_setup_id.leaveType}</td>
               <td className="px-6 py-3">
                 {new Date(leave.startDate).toLocaleDateString()}
               </td>

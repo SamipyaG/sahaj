@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/authContext";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import dayjs from "dayjs"; // For better date handling
 
 const AddLeave = () => {
   const { user } = useAuth();
@@ -11,6 +12,7 @@ const AddLeave = () => {
   const [formData, setFormData] = useState({
     user_id: user._id,
     leave_setup_id: "",
+    leaveType: "", // Added to match backend
     startDate: "",
     endDate: "",
     reason: ""
@@ -23,6 +25,7 @@ const AddLeave = () => {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [numOfDays, setNumOfDays] = useState(0); // Track calculated days
 
   // Fetch available leave types
   useEffect(() => {
@@ -49,7 +52,7 @@ const AddLeave = () => {
         setError("");
       } catch (err) {
         console.error("Error fetching leave types:", err);
-        setError(err.response?.data?.message || "Failed to load leave types");
+        setError(err.response?.data?.error || "Failed to load leave types");
       } finally {
         setIsLoading(false);
       }
@@ -58,6 +61,16 @@ const AddLeave = () => {
     fetchLeaveTypes();
   }, []);
 
+  // Calculate days whenever dates change
+  useEffect(() => {
+    if (formData.startDate && formData.endDate) {
+      const days = calculateDays(formData.startDate, formData.endDate);
+      setNumOfDays(days);
+    } else {
+      setNumOfDays(0);
+    }
+  }, [formData.startDate, formData.endDate]);
+
   // Handle leave type selection
   const handleLeaveTypeChange = (e) => {
     const selectedId = e.target.value;
@@ -65,22 +78,44 @@ const AddLeave = () => {
     setSelectedLeaveType(type);
     setFormData(prev => ({
       ...prev,
-      leave_setup_id: selectedId
+      leave_setup_id: selectedId,
+      leaveType: type?.type || "" // Set leaveType to match backend
     }));
   };
 
   // Handle other form field changes
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // For end date, ensure it's not before start date
+    if (name === "endDate" && formData.startDate && value < formData.startDate) {
+      setError("End date cannot be before start date");
+      return;
+    }
+    
+    setFormData(prev => ({ 
+      ...prev, 
+      [name]: value 
+    }));
+    
+    // Clear error when user corrects input
+    if (error) setError("");
   };
 
-  // Calculate days between dates
-  const calculateDays = () => {
-    if (!formData.startDate || !formData.endDate) return 0;
-    const start = new Date(formData.startDate);
-    const end = new Date(formData.endDate);
-    return Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+  // Calculate days between dates (improved)
+  const calculateDays = (startDate, endDate) => {
+    try {
+      const start = dayjs(startDate);
+      const end = dayjs(endDate);
+      
+      if (end.isBefore(start)) {
+        return 0;
+      }
+      
+      return end.diff(start, 'day') + 1; // Inclusive of both dates
+    } catch (error) {
+      return 0;
+    }
   };
 
   // Form validation
@@ -94,16 +129,15 @@ const AddLeave = () => {
       return false;
     }
 
-    const start = new Date(formData.startDate);
-    const end = new Date(formData.endDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const start = dayjs(formData.startDate);
+    const end = dayjs(formData.endDate);
+    const today = dayjs().startOf('day');
 
-    if (start < today) {
+    if (start.isBefore(today)) {
       setError("Start date cannot be in the past");
       return false;
     }
-    if (end < start) {
+    if (end.isBefore(start)) {
       setError("End date cannot be before start date");
       return false;
     }
@@ -113,7 +147,6 @@ const AddLeave = () => {
     }
 
     // Validate against max days
-    const numOfDays = calculateDays();
     if (selectedLeaveType && numOfDays > selectedLeaveType.maxDays) {
       setError(`Maximum ${selectedLeaveType.maxDays} days allowed for ${selectedLeaveType.type}`);
       return false;
@@ -134,7 +167,8 @@ const AddLeave = () => {
         "http://localhost:5000/api/leave/add",
         {
           ...formData,
-          numOfDays: calculateDays()
+          numOfDays, // Send calculated days
+          leaveType: selectedLeaveType.type // Ensure leaveType is sent
         },
         {
           headers: {
@@ -145,11 +179,11 @@ const AddLeave = () => {
 
       if (response.data.success) {
         setSuccess(true);
-        setTimeout(() => navigate("/employee-dashboard/leaves"), 1500);
+        setTimeout(() => navigate("/employee-dashboard"), 1500);
       }
     } catch (err) {
       console.error("Leave submission error:", err);
-      setError(err.response?.data?.message || "Failed to submit leave request");
+      setError(err.response?.data?.error || "Failed to submit leave request");
     } finally {
       setIsSubmitting(false);
     }
@@ -221,7 +255,7 @@ const AddLeave = () => {
                 onChange={handleChange}
                 className="w-full p-3 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
                 required
-                min={new Date().toISOString().split('T')[0]}
+                min={dayjs().format('YYYY-MM-DD')}
                 disabled={isSubmitting}
               />
             </div>
@@ -236,23 +270,32 @@ const AddLeave = () => {
                 onChange={handleChange}
                 className="w-full p-3 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
                 required
-                min={formData.startDate || new Date().toISOString().split('T')[0]}
+                min={formData.startDate || dayjs().format('YYYY-MM-DD')}
                 disabled={isSubmitting}
               />
             </div>
           </div>
 
           {/* Days Calculation */}
-          {formData.startDate && formData.endDate && (
-            <div className="bg-blue-50 p-3 rounded-md">
-              <p className="text-sm text-blue-800">
-                Total Leave Days: <span className="font-bold">{calculateDays()}</span>
+          {numOfDays > 0 && (
+            <div className={`p-3 rounded-md ${
+              selectedLeaveType && numOfDays > selectedLeaveType.maxDays 
+                ? 'bg-red-50 text-red-800' 
+                : 'bg-blue-50 text-blue-800'
+            }`}>
+              <p className="text-sm">
+                Total Leave Days: <span className="font-bold">{numOfDays}</span>
                 {selectedLeaveType && (
                   <span className="ml-2">
                     (Max allowed: {selectedLeaveType.maxDays} days)
                   </span>
                 )}
               </p>
+              {selectedLeaveType && numOfDays > selectedLeaveType.maxDays && (
+                <p className="mt-1 text-sm font-medium">
+                  You're requesting more days than allowed for this leave type
+                </p>
+              )}
             </div>
           )}
 
@@ -285,10 +328,10 @@ const AddLeave = () => {
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || (selectedLeaveType && numOfDays > selectedLeaveType.maxDays)}
               className={`px-6 py-2 rounded-md text-white ${
-                isSubmitting
-                  ? 'bg-teal-400 cursor-not-allowed'
+                isSubmitting || (selectedLeaveType && numOfDays > selectedLeaveType.maxDays)
+                  ? 'bg-teal-300 cursor-not-allowed'
                   : 'bg-teal-600 hover:bg-teal-700'
               }`}
             >
