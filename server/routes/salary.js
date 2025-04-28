@@ -8,7 +8,7 @@ const router = express.Router();
 router.post('/add', authMiddleware, initSalaryCronJob);
 
 // Route to add a new salary record automatically
-router.post('/paidStatus', authMiddleware, getOverallSalaryStatus);
+router.get('/paidStatus', authMiddleware, getOverallSalaryStatus);
 
 // Route to get salary details for a specific employee by ID
 router.get('/:id', authMiddleware, getEmployeeSalaries);

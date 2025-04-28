@@ -10,6 +10,7 @@ import dashboardRouter from './routes/dashboard.js';
 import designationRouter from './routes/designation.js'; 
 import leavesetupRouter from './routes/leavesetup.js'; 
 import connectToDatabase from './db/db.js';
+import { initSalaryCronJob } from './controllers/salaryController.js'; // Import the cron job initializer
 
 import dotenv from 'dotenv';
 dotenv.config();
@@ -29,8 +30,11 @@ app.use('/api/leave', leaveRouter);
 app.use('/api/leave-setup', leavesetupRouter);
 app.use('/api/setting', settingRouter);
 app.use('/api/dashboard', dashboardRouter);
-app.use('/api/designation', designationRouter); 
-// app.use('/api/leave-Setup',leaveSetupRouter);
+app.use('/api/designation', designationRouter);
+
+// Initialize the salary cron job when server starts
+initSalaryCronJob();
+
 app.listen(process.env.PORT, () => {
     console.log(`Server is Running on port ${process.env.PORT}`);
 });
