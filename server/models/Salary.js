@@ -18,15 +18,31 @@ const salarySchema = new Schema(
       ref: 'Designation', 
       required: true 
     },
-    Paydate: { 
+    pay_date: { 
       type: Date, 
-      required: true 
+      required: true,
+      validate: {
+        validator: function(date) {
+          return date <= new Date();
+        },
+        message: "Pay date cannot be in the future"
+      }
     },
-    tax:
-  {
-    type:Number,
-    require:true
-  }
+    tax: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    allowances: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    deductions: {
+      type: Number,
+      default: 0,
+      min: 0
+    }
   },
   { 
     timestamps: true,
@@ -35,10 +51,15 @@ const salarySchema = new Schema(
   }
 );
 
-// Virtual field for `net_salary`
+// Virtual field for net_salary with safe access
 salarySchema.virtual('net_salary').get(function() {
-  return this.designation_id.basic_salary + (this.allowances || 0);
+  const basic = this.designation_id?.basic_salary || 0;
+  return basic + (this.allowances || 0) - (this.tax || 0) - (this.deductions || 0);
 });
+
+// Performance indexes (removed duplicate salary_id index)
+salarySchema.index({ employee_id: 1 });
+salarySchema.index({ pay_date: -1 });
 
 const Salary = mongoose.model('Salary', salarySchema);
 export default Salary;

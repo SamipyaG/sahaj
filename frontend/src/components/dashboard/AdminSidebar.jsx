@@ -4,11 +4,11 @@ import {
   FaBuilding,
   FaCalendarCheck,
   FaCogs,
-  FaMoneyCheckAlt,
+  
   FaTachometerAlt,
   FaUsers,
   FaUserTie,
-  FaUserCog,
+  
   FaClipboardList,
   FaWallet,
 } from "react-icons/fa";
@@ -86,6 +86,17 @@ const AdminSidebar = () => {
         >
           <FaWallet className="text-xl" />
           <span className="font-medium">Automatic Salary Slip</span>
+        </NavLink>
+        <NavLink
+          to="/admin-dashboard/salary/salaryconfig"
+          className={({ isActive }) =>
+            `${
+              isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
+            } flex items-center space-x-4 block py-3 px-4 rounded-lg mt-2 transition-all duration-300`
+          }
+        >
+          <FaWallet className="text-xl" />
+          <span className="font-medium">Salary Config</span>
         </NavLink>
 
         <NavLink

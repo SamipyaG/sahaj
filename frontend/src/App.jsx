@@ -12,8 +12,9 @@ import List from "./components/employee/List";
 import Add from "./components/employee/Add";
 import View from "./components/employee/View";
 import Edit from "./components/employee/Edit";
-
 import AutomaticSalary from "./components/salary/OverallSalaryStatus";
+
+import SalaryView from "./components/salary/View";
 import DesignationAdd from "./components/designation/add";
 import DesignationEdit from "./components/designation/edit";
 import DesignationList from "./components/designation/list";
@@ -27,6 +28,7 @@ import Detail from "./components/leave/Detail";
 import LeaveSeatupAdd from "./components/leaveSetup/add"
 import LeaveSeatupEdit from "./components/leaveSetup/edit"
 import LeaveSeatupList from "./components/leaveSetup/list"
+import SalaryConfig from "./components/salary/SalaryConfig";
 
 function App() {
   return (
@@ -78,6 +80,15 @@ function App() {
            <Route
             path="/admin-dashboard/salary/automatic"
             element={<AutomaticSalary />}
+          ></Route>
+          
+           <Route
+            path="/admin-dashboard/salary/view"
+            element={<SalaryView />}
+          ></Route>
+           <Route
+            path="/admin-dashboard/salary/salaryconfig"
+            element={<SalaryConfig />}
           ></Route>
           <Route
             path="/admin-dashboard/designation/add"

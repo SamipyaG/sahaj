@@ -1,17 +1,27 @@
 import express from 'express';
+import {
+  getPaidStatus,
+  getEmployeeSalaries
+} from '../controllers/salaryController.js';
 import authMiddleware from '../middleware/authMiddlware.js';
-import { initSalaryCronJob, getEmployeeSalaries, getOverallSalaryStatus} from '../controllers/salaryController.js';
+import authorize from '../middleware/authorizeMiddleware.js';
 
 const router = express.Router();
 
-// Route to add a new salary record automatically
-router.post('/add', authMiddleware, initSalaryCronJob);
+// Get overall salary payment status (Admin/HR only)
+router.get(
+  '/paidStatus', 
+  authMiddleware, 
+  authorize(['admin']), 
+  getPaidStatus
+);
 
-// Route to add a new salary record automatically
-router.get('/paidStatus', authMiddleware, getOverallSalaryStatus);
-
-// Route to get salary details for a specific employee by ID
-router.get('/:id', authMiddleware, getEmployeeSalaries);
-
+// Get employee salary history (accessible by employee or admin/hr)
+router.get(
+  '/:id', 
+  authMiddleware, 
+  authorize(['admin', 'employee'], true), 
+  getEmployeeSalaries
+);
 
 export default router;
