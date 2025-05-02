@@ -47,12 +47,12 @@ const EditEmployee = () => {
         );
 
         if (response.data.success) {
-          const emp = response.data.data; // Changed from response.data.employee to response.data.data
+          const emp = response.data.data;
           setEmployee({
-            name: emp.user.name, // Changed from emp.userId.name to emp.user.name
-            maritalStatus: emp.marital_status || "", // Changed from emp.maritalStatus
-            designation: emp.designation_id?._id || "", // Changed from emp.designation
-            department: emp.department_id?._id || "", // Changed from emp.department
+            name: emp.user.name,
+            maritalStatus: emp.marital_status || "",
+            designation: emp.designation_id?._id || "",
+            department: emp.department_id?._id || "",
           });
 
           // Fetch designations for the employee's department
@@ -143,124 +143,176 @@ const EditEmployee = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal-600"></div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center p-8 bg-white rounded-lg shadow-lg max-w-md w-full">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500 mx-auto mb-4"></div>
+          <h3 className="text-lg font-medium text-gray-700">Loading employee data...</h3>
+          <p className="text-gray-500 mt-1">Please wait while we fetch the details</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">Edit Employee</h2>
-      <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Name Field */}
-          <div className="col-span-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Full Name
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={employee.name}
-              onChange={handleChange}
-              placeholder="Employee Name"
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
-              required
-            />
+    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-8 flex justify-between items-center">
+          <div>
+            <h2 className="text-3xl font-extrabold text-gray-900">Edit Employee</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Update employee information below
+            </p>
           </div>
-
-          {/* Marital Status Field */}
-          <div className="col-span-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Marital Status
-            </label>
-            <select
-              name="maritalStatus"
-              onChange={handleChange}
-              value={employee.maritalStatus}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
-              required
-            >
-              <option value="">Select Status</option>
-              <option value="single">Single</option>
-              <option value="married">Married</option>
-              <option value="divorced">Divorced</option>
-              <option value="widowed">Widowed</option>
-            </select>
-          </div>
-
-          {/* Department Field */}
-          <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Department
-            </label>
-            <select
-              name="department"
-              onChange={handleDepartmentChange}
-              value={employee.department}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
-              required
-            >
-              <option value="">Select Department</option>
-              {departments.map((dep) => (
-                <option key={dep._id} value={dep._id}>
-                  {dep.department_name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Designation Field */}
-          <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Designation
-            </label>
-            <select
-              name="designation"
-              onChange={handleChange}
-              value={employee.designation}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
-              required
-              disabled={!employee.department}
-            >
-              <option value="">Select Designation</option>
-              {designations.map((des) => (
-                <option key={des._id} value={des._id}>
-                  {des.title} (${des.basic_salary})
-                </option>
-              ))}
-            </select>
-            {!employee.department && (
-              <p className="mt-1 text-sm text-gray-500">
-                Please select a department first
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Form Actions */}
-        <div className="mt-8 flex justify-end space-x-4">
           <button
-            type="button"
             onClick={() => navigate("/admin-dashboard/employees")}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500"
+            className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={updating}
-            className={`px-4 py-2 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 ${
-              updating
-                ? "bg-teal-400 cursor-not-allowed"
-                : "bg-teal-600 hover:bg-teal-700"
-            }`}
-          >
-            {updating ? "Updating..." : "Update Employee"}
+            ← Back to Employees
           </button>
         </div>
-      </form>
+
+        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+          <div className="px-4 py-5 sm:px-6 bg-gradient-to-r from-indigo-500 to-purple-600">
+            <h3 className="text-lg leading-6 font-medium text-white">
+              Employee Details
+            </h3>
+            <p className="mt-1 max-w-2xl text-sm text-indigo-100">
+              Update the employee information as needed
+            </p>
+          </div>
+          
+          <form onSubmit={handleSubmit} className="p-6">
+            <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2">
+              {/* Name Field */}
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                  Full Name
+                </label>
+                <div className="mt-1">
+                  <input
+                    type="text"
+                    name="name"
+                    id="name"
+                    value={employee.name}
+                    onChange={handleChange}
+                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Marital Status Field */}
+              <div>
+                <label htmlFor="maritalStatus" className="block text-sm font-medium text-gray-700">
+                  Marital Status
+                </label>
+                <div className="mt-1">
+                  <select
+                    id="maritalStatus"
+                    name="maritalStatus"
+                    value={employee.maritalStatus}
+                    onChange={handleChange}
+                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                    required
+                  >
+                    <option value="">Select Status</option>
+                    <option value="single">Single</option>
+                    <option value="married">Married</option>
+                    <option value="divorced">Divorced</option>
+                    <option value="widowed">Widowed</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Department Field */}
+              <div className="sm:col-span-2">
+                <label htmlFor="department" className="block text-sm font-medium text-gray-700">
+                  Department
+                </label>
+                <div className="mt-1">
+                  <select
+                    id="department"
+                    name="department"
+                    value={employee.department}
+                    onChange={handleDepartmentChange}
+                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                    required
+                  >
+                    <option value="">Select Department</option>
+                    {departments.map((dep) => (
+                      <option key={dep._id} value={dep._id}>
+                        {dep.department_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Designation Field */}
+              <div className="sm:col-span-2">
+                <label htmlFor="designation" className="block text-sm font-medium text-gray-700">
+                  Designation
+                </label>
+                <div className="mt-1">
+                  <select
+                    id="designation"
+                    name="designation"
+                    value={employee.designation}
+                    onChange={handleChange}
+                    disabled={!employee.department}
+                    className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border ${
+                      !employee.department ? "bg-gray-100" : ""
+                    }`}
+                    required
+                  >
+                    <option value="">Select Designation</option>
+                    {designations.map((des) => (
+                      <option key={des._id} value={des._id}>
+                        {des.title} (${des.basic_salary.toLocaleString()})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {!employee.department && (
+                  <p className="mt-2 text-sm text-gray-500">
+                    Please select a department first to see available designations
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Form Actions */}
+            <div className="mt-8 pt-5 border-t border-gray-200 flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => navigate("/admin-dashboard/employees")}
+                className="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={updating}
+                className={`inline-flex items-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
+                  updating
+                    ? "bg-indigo-400 cursor-not-allowed"
+                    : "bg-indigo-600 hover:bg-indigo-700"
+                }`}
+              >
+                {updating ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Updating...
+                  </>
+                ) : "Update Employee"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
   );
 };

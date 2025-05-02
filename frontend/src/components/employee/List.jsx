@@ -37,7 +37,7 @@ const List = () => {
             profileImage: (
               <img
                 width={40}
-                className="rounded-full"
+                className="rounded-full" crossorigin="anonymous"
                 src={
                   (emp.user?.profileImage || emp.user_id?.profileImage)
                     ? `http://localhost:5000/${emp.user?.profileImage || emp.user_id?.profileImage}`
