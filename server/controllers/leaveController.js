@@ -79,14 +79,8 @@ const addLeave = async (req, res) => {
 // Get leave requests (updated with date filtering)
 const getLeave = async (req, res) => {
     try {
-        const { id } = req.params;
+        const { id, role } = req.params;
         const { startDate, endDate } = req.query;
-
-        // Find the user
-        const user = await User.findById(id);
-        if (!user) {
-            return res.status(404).json({ success: false, error: "User not found" });
-        }
 
         let leaves;
         let query = {};
@@ -112,17 +106,18 @@ const getLeave = async (req, res) => {
             }
         ];
 
-        if (user.role === "admin") {
-            // Admin: Fetch all leaves with filtering
+        if (role === "admin") {
+            // Admin: Fetch all leaves
             leaves = await Leave.find(query)
                 .populate(populationOptions)
                 .sort({ startDate: -1 });
         } else {
-            // Non-admin: Fetch only their leaves
+            // Non-admin: Use `id` as user_id to find employee
             const employee = await Employee.findOne({ user_id: id });
             if (!employee) {
                 return res.status(404).json({ success: false, error: "Employee not found" });
             }
+
             query.employee_id = employee._id;
             leaves = await Leave.find(query)
                 .populate(populationOptions)
@@ -139,6 +134,9 @@ const getLeave = async (req, res) => {
         });
     }
 };
+
+
+
 // Get all leave requests (updated with date filtering for admin)
 const getLeaves = async (req, res) => {
     try {
