@@ -66,7 +66,7 @@ const Detail = () => {
           <h2 className="text-2xl font-bold mb-8 text-center">Leave Details</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <img
+              <img crossorigin="anonymous"
                 src={`http://localhost:5000/${leave.employee_id.user_id.profileImage}`}
                 className="rounded-full border w-72"
                 alt="Profile"

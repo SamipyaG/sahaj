@@ -117,14 +117,7 @@ export const EmployeeButtons = ({ Id }) => {
       >
         Edit
       </button>
-      <button
-        className="px-3 py-1 bg-red-600 text-white"
-        onClick={() => {
-          
-        }}
-      >
-        Delete
-      </button>
+     
 
       <button
         className="px-3 py-1 bg-yellow-600 text-white"
