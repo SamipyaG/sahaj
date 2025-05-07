@@ -13,7 +13,6 @@ import Add from "./components/employee/Add";
 import View from "./components/employee/View";
 import Edit from "./components/employee/Edit";
 import AutomaticSalary from "./components/salary/OverallSalaryStatus";
-
 import SalaryView from "./components/salary/View";
 import DesignationAdd from "./components/designation/add";
 import DesignationEdit from "./components/designation/edit";

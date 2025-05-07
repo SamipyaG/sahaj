@@ -12,7 +12,7 @@ const OverallSalaryStatus = () => {
   const fetchSalaryStatus = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/salary/paidStatus', {
+      const response = await axios.get('http://localhost:5000/api/salary/paidStatus', {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         }

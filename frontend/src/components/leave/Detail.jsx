@@ -7,6 +7,15 @@ const Detail = () => {
   const [leave, setLeave] = useState(null);
   const navigate = useNavigate();
 
+  // Function to calculate the number of days between two dates
+  const calculateDays = (startDate, endDate) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffTime = Math.abs(end - start);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end dates
+    return diffDays;
+  };
+
   useEffect(() => {
     const fetchLeave = async () => {
       try {
@@ -102,6 +111,14 @@ const Detail = () => {
               <div className="flex space-x-3 mb-2">
                 <p className="text-lg font-bold">End Date:</p>
                 <p className="font-medium">{formatDate(leave.endDate)}</p>
+              </div>
+              
+              {/* Added Leave Days */}
+              <div className="flex space-x-3 mb-2">
+                <p className="text-lg font-bold">Total Days:</p>
+                <p className="font-medium">
+                  {calculateDays(leave.startDate, leave.endDate)} day(s)
+                </p>
               </div>
 
               <div className="flex space-x-3 mb-2">

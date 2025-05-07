@@ -239,7 +239,7 @@ const AddEmployee = () => {
               <option value="">Select Designation</option>
               {designations.map(des => (
                 <option key={des._id} value={des._id}>
-                  {des.designation_name}
+                  {des.title}
                 </option>
               ))}
             </select>

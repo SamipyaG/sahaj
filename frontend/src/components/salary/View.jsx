@@ -11,12 +11,13 @@ const EmployeeSalaryView = () => {
   const fetchSalaries = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/salary/${id}`, {
+      const response = await axios.get(`http://localhost:5000/api/salary/${id}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         }
       });
       setSalaries(response.data.success ? response.data.data.docs : []);
+      console.log(salaries)
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to fetch salary records');
     } finally {
