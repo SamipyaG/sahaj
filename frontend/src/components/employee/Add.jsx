@@ -21,17 +21,20 @@ const AddEmployee = () => {
   const [designations, setDesignations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [serialNumber, setSerialNumber] = useState(1);
   const navigate = useNavigate();
 
   useEffect(() => {
     const loadInitialData = async () => {
       try {
-        const [deptData, desigData] = await Promise.all([
+        const [deptData, desigData, snData] = await Promise.all([
           fetchDepartments(),
-          fetchDesignations()
+          fetchDesignations(),
+          fetchLatestEmployeeId()
         ]);
         setDepartments(deptData);
         setDesignations(desigData);
+        setSerialNumber(snData.serialNumber || 1);
       } catch (err) {
         console.error("Failed to load initial data:", err);
         setError("Failed to load department/designation data");
@@ -39,6 +42,41 @@ const AddEmployee = () => {
     };
     loadInitialData();
   }, []);
+
+  // Fetch the latest employee ID to determine the next serial number
+  const fetchLatestEmployeeId = async () => {
+    try {
+      const response = await axios.get(
+        'http://localhost:5000/api/employee/latest-id',
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        }
+      );
+      return response.data;
+    } catch (err) {
+      console.error('Error fetching latest employee ID:', err);
+      return { serialNumber: 1 };
+    }
+  };
+
+  // Generate employee ID when department or designation changes
+  useEffect(() => {
+    if (formData.department_id && formData.designation_id) {
+      const department = departments.find(d => d._id === formData.department_id);
+      const designation = designations.find(d => d._id === formData.designation_id);
+      
+      if (department && designation) {
+        const deptPrefix = department.department_name.substring(0, 2).toUpperCase();
+        const desigPrefix = designation.title.substring(0, 2).toUpperCase();
+        const paddedSerial = serialNumber.toString().padStart(4, '0');
+        
+        const generatedId = `${deptPrefix}-${desigPrefix}-${paddedSerial}`;
+        setFormData(prev => ({ ...prev, employee_id: generatedId }));
+      }
+    }
+  }, [formData.department_id, formData.designation_id, departments, designations, serialNumber]);
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
@@ -137,7 +175,7 @@ const AddEmployee = () => {
             />
           </div>
 
-          {/* Employee ID */}
+          {/* Employee ID (read-only) */}
           <div>
             <label className="block text-sm font-medium text-gray-700">
               Employee ID *
@@ -146,10 +184,12 @@ const AddEmployee = () => {
               type="text"
               name="employee_id"
               value={formData.employee_id}
-              onChange={handleChange}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-              required
+              readOnly
+              className="mt-1 p-2 block w-full border border-gray-300 rounded-md bg-gray-100"
             />
+            <p className="text-xs text-gray-500 mt-1">
+              Employee ID is generated automatically
+            </p>
           </div>
 
           {/* Date of Birth */}

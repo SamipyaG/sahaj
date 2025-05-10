@@ -1,6 +1,6 @@
 import express from 'express';
 import authMiddleware from '../middleware/authMiddlware.js';
-import { addLeave, getLeave, getLeaves, getLeaveDetail, updateLeave } from '../controllers/leaveController.js';
+import { addLeave, getLeave, getLeaves, getLeaveDetail, updateLeave,getLeaveHistory } from '../controllers/leaveController.js';
 
 const router = express.Router();
 
@@ -18,5 +18,7 @@ router.get('/', authMiddleware, getLeaves);
 
 // Route to update leave status (e.g., Approve or Reject)
 router.put('/:id', authMiddleware, updateLeave);
+
+router.get('/history/:userId/:leaveSetupId', authMiddleware, getLeaveHistory);
 
 export default router;

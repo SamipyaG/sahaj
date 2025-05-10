@@ -58,6 +58,7 @@ const populateEmployeeData = async (employee) => {
     }
   };
 };
+
 const addEmployee = async (req, res) => {
   try {
     const requiredFields = [
@@ -162,7 +163,6 @@ const addEmployee = async (req, res) => {
   }
 };
 
-// Get all employees
 const getEmployees = async (req, res) => {
   try {
     const employees = await Employee.find()
@@ -189,21 +189,36 @@ const getEmployees = async (req, res) => {
   }
 };
 
-// Get single employee
 const getEmployee = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const employee = await Employee.findOne({
-      $or: [
-        { _id: id },
-        { employee_id: id },
-        { user_id: id }
-      ]
-    })
-    .populate('department_id', 'department_name')
-    .populate('designation_id', 'title basic_salary')
-    .populate('user_id', 'name email role profileImage');
+    // First check if it's a valid MongoDB ID
+    if (/^[0-9a-fA-F]{24}$/.test(id)) {
+      const employee = await Employee.findOne({
+        $or: [
+          { _id: id },
+          { user_id: id }
+        ]
+      })
+      .populate('department_id', 'department_name')
+      .populate('designation_id', 'title basic_salary')
+      .populate('user_id', 'name email role profileImage');
+
+      if (employee) {
+        const populatedEmployee = await populateEmployeeData(employee);
+        return res.status(200).json({
+          success: true,
+          data: populatedEmployee
+        });
+      }
+    }
+
+    // If not a MongoDB ID, try searching by employee_id
+    const employee = await Employee.findOne({ employee_id: id })
+      .populate('department_id', 'department_name')
+      .populate('designation_id', 'title basic_salary')
+      .populate('user_id', 'name email role profileImage');
 
     if (!employee) {
       return res.status(404).json({
@@ -228,24 +243,19 @@ const getEmployee = async (req, res) => {
   }
 };
 
-
-// Update employee
 const updateEmployee = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
 
-    // Create a filtered updates object with proper field mapping
     const allowedUpdates = {};
     const updatableFields = ['employee_name', 'marital_status', 'designation_id', 'department_id'];
     
-    // Map frontend fields to backend fields
     if (updates.name) allowedUpdates.employee_name = updates.name;
     if (updates.maritalStatus) allowedUpdates.marital_status = updates.maritalStatus;
     if (updates.designation) allowedUpdates.designation_id = updates.designation;
     if (updates.department) allowedUpdates.department_id = updates.department;
 
-    // Update user if name changed
     if (allowedUpdates.employee_name) {
       const employee = await Employee.findById(id);
       if (employee) {
@@ -287,12 +297,11 @@ const updateEmployee = async (req, res) => {
     });
   }
 };
-// Get employees by department
+
 const fetchEmployeesByDepId = async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Verify department exists
     const department = await Department.findById(id);
     if (!department) {
       return res.status(404).json({
@@ -326,11 +335,63 @@ const fetchEmployeesByDepId = async (req, res) => {
   }
 };
 
+const getEmployeeCount = async (req, res) => {
+  try {
+    const count = await Employee.countDocuments();
+    return res.status(200).json({
+      success: true,
+      count
+    });
+  } catch (error) {
+    console.error("Error in getEmployeeCount:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Failed to get employee count",
+      details: error.message
+    });
+  }
+};
+
+const getLatestEmployeeId = async (req, res) => {
+  try {
+    const latestEmployee = await Employee.findOne()
+      .sort({ employee_id: -1 })
+      .select('employee_id');
+
+    let serialNumber = 1;
+    
+    if (latestEmployee && latestEmployee.employee_id) {
+      const parts = latestEmployee.employee_id.split('-');
+      if (parts.length === 3) {
+        const lastPart = parts[2];
+        const num = parseInt(lastPart);
+        if (!isNaN(num)) {
+          serialNumber = num + 1;
+        }
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      serialNumber
+    });
+  } catch (error) {
+    console.error("Error in getLatestEmployeeId:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Failed to get latest employee ID",
+      details: error.message
+    });
+  }
+};
+
 export { 
   addEmployee, 
   upload, 
   getEmployees, 
   getEmployee, 
   updateEmployee, 
-  fetchEmployeesByDepId 
+  fetchEmployeesByDepId,
+  getEmployeeCount,
+  getLatestEmployeeId
 };

@@ -1,59 +1,96 @@
 import Employee from '../models/Employee.js';
 import Leave from '../models/Leave.js';
 import User from '../models/User.js';
+import LeaveSetup from '../models/LeaveSetup.js';
 
-// Function to calculate the number of leave days (improved)
+// Utility function to calculate leave days
 const calculateLeaveDays = (startDate, endDate) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
     
-    // Validate dates
     if (start > end) {
         throw new Error('End date must be after start date');
     }
     
-    // Calculate difference in days (inclusive of both start and end dates)
     const timeDiff = end - start;
     const dayDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24)) + 1;
-    
     return dayDiff;
 };
 
-// Add a new leave request (updated with date validation)
+// Add a new leave request with balance validation
 const addLeave = async (req, res) => {
     try {
-        const { user_id, leaveType, startDate, endDate, reason } = req.body;
+        const { user_id, leave_setup_id, startDate, endDate, reason } = req.body;
 
         // Validate required fields
-        if (!startDate || !endDate) {
-            return res.status(400).json({ success: false, error: "Start date and end date are required" });
+        if (!startDate || !endDate || !leave_setup_id) {
+            return res.status(400).json({ 
+                success: false, 
+                error: "Start date, end date, and leave type are required" 
+            });
         }
 
-        // Find the employee associated with the user
+        // Find employee and leave setup
         const employee = await Employee.findOne({ user_id });
         if (!employee) {
-            return res.status(404).json({ success: false, error: "Employee not found" });
+            return res.status(404).json({ 
+                success: false, 
+                error: "Employee not found" 
+            });
         }
 
-        // Calculate the number of leave days with validation
+        const leaveSetup = await LeaveSetup.findById(leave_setup_id);
+        if (!leaveSetup) {
+            return res.status(404).json({ 
+                success: false, 
+                error: "Leave type not found" 
+            });
+        }
+
+        // Calculate requested days
         let numOfDays;
         try {
             numOfDays = calculateLeaveDays(startDate, endDate);
             if (numOfDays <= 0) {
-                return res.status(400).json({ success: false, error: "Invalid date range" });
+                return res.status(400).json({ 
+                    success: false, 
+                    error: "Invalid date range" 
+                });
             }
         } catch (error) {
-            return res.status(400).json({ success: false, error: error.message });
+            return res.status(400).json({ 
+                success: false, 
+                error: error.message 
+            });
         }
 
-        // Create a new leave request
+        // Check leave balance
+        const approvedLeaves = await Leave.find({
+            employee_id: employee._id,
+            leave_setup_id,
+            status: "Approved"
+        });
+
+        const consumedDays = approvedLeaves.reduce((sum, leave) => sum + leave.numOfDays, 0);
+        const remainingDays = leaveSetup.maxDays - consumedDays;
+
+        if (numOfDays > remainingDays) {
+            return res.status(400).json({ 
+                success: false, 
+                error: `Insufficient leave balance. You have ${remainingDays} days remaining for ${leaveSetup.leaveType}`,
+                remainingDays,
+                maxDays: leaveSetup.maxDays
+            });
+        }
+
+        // Create new leave
         const newLeave = new Leave({
             leave_id: "LEAVE-" + Date.now(),
             employee_id: employee._id,
-            leave_setup_id: req.body.leave_setup_id,
-            leaveType, // Added leaveType to the document
-            startDate: new Date(startDate), // Ensure proper date format
-            endDate: new Date(endDate), // Ensure proper date format
+            leave_setup_id,
+            leaveType: leaveSetup.leaveType,
+            startDate: new Date(startDate),
+            endDate: new Date(endDate),
             reason,
             numOfDays,
             status: "Pending"
@@ -64,11 +101,12 @@ const addLeave = async (req, res) => {
         return res.status(201).json({ 
             success: true, 
             message: "Leave request submitted successfully", 
-            leave: newLeave 
+            leave: newLeave,
+            remainingDays: remainingDays - numOfDays
         });
 
     } catch (error) {
-        console.error("Leave creation error:", error.message);
+        console.error("Leave creation error:", error);
         return res.status(500).json({ 
             success: false, 
             error: "Server error while processing leave request" 
@@ -76,58 +114,107 @@ const addLeave = async (req, res) => {
     }
 };
 
-// Get leave requests (updated with date filtering)
+// Get leave history for balance calculation
+const getLeaveHistory = async (req, res) => {
+    try {
+        const { userId, leaveSetupId } = req.params;
+
+        const employee = await Employee.findOne({ user_id: userId });
+        if (!employee) {
+            return res.status(404).json({ 
+                success: false, 
+                error: "Employee not found" 
+            });
+        }
+
+        const leaveSetup = await LeaveSetup.findById(leaveSetupId);
+        if (!leaveSetup) {
+            return res.status(404).json({ 
+                success: false, 
+                error: "Leave type not found" 
+            });
+        }
+
+        const leaves = await Leave.find({
+            employee_id: employee._id,
+            leave_setup_id: leaveSetupId,
+            status: "Approved"
+        }).sort({ startDate: -1 });
+
+        const consumedDays = leaves.reduce((sum, leave) => sum + leave.numOfDays, 0);
+        const remainingDays = leaveSetup.maxDays - consumedDays;
+
+        return res.status(200).json({ 
+            success: true, 
+            leaves,
+            consumedDays,
+            remainingDays,
+            maxDays: leaveSetup.maxDays,
+            leaveType: leaveSetup.leaveType
+        });
+
+    } catch (error) {
+        console.error("Leave history error:", error);
+        return res.status(500).json({ 
+            success: false, 
+            error: "Server error while fetching leave history" 
+        });
+    }
+};
+
+// Get leaves based on user ID and role
 const getLeave = async (req, res) => {
     try {
         const { id, role } = req.params;
-        const { startDate, endDate } = req.query;
+        const { startDate, endDate, status } = req.query;
 
-        let leaves;
         let query = {};
-
-        // Date filtering (if provided)
         if (startDate && endDate) {
             query.startDate = { $gte: new Date(startDate) };
             query.endDate = { $lte: new Date(endDate) };
         }
+        if (status) {
+            query.status = status;
+        }
 
-        // Common population options
         const populationOptions = [
             { 
                 path: 'employee_id', 
                 populate: [
                     { path: 'department_id', select: 'department_name' },
-                    { path: 'user_id', select: 'name' }
+                    { path: 'user_id', select: 'name email' }
                 ] 
             },
             { 
-                path: 'leave_setup_id',  // Populate leave type details
+                path: 'leave_setup_id',
                 select: 'leaveType maxDays description' 
             }
         ];
 
         if (role === "admin") {
-            // Admin: Fetch all leaves
-            leaves = await Leave.find(query)
+            const leaves = await Leave.find(query)
                 .populate(populationOptions)
-                .sort({ startDate: -1 });
-        } else {
-            // Non-admin: Use `id` as user_id to find employee
-            const employee = await Employee.findOne({ user_id: id });
-            if (!employee) {
-                return res.status(404).json({ success: false, error: "Employee not found" });
-            }
-
-            query.employee_id = employee._id;
-            leaves = await Leave.find(query)
-                .populate(populationOptions)
-                .sort({ startDate: -1 });
+                .sort({ createdAt: -1 });
+            return res.status(200).json({ success: true, leaves });
         }
+
+        const employee = await Employee.findOne({ user_id: id });
+        if (!employee) {
+            return res.status(404).json({ 
+                success: false, 
+                error: "Employee not found" 
+            });
+        }
+
+        query.employee_id = employee._id;
+        const leaves = await Leave.find(query)
+            .populate(populationOptions)
+            .sort({ createdAt: -1 });
 
         return res.status(200).json({ success: true, leaves });
 
     } catch (error) {
-        console.error("Leave fetch error:", error.message);
+        console.error("Leave fetch error:", error);
         return res.status(500).json({ 
             success: false, 
             error: "Server error while fetching leave data" 
@@ -135,38 +222,40 @@ const getLeave = async (req, res) => {
     }
 };
 
-
-
-// Get all leave requests (updated with date filtering for admin)
+// Get all leaves (admin only)
 const getLeaves = async (req, res) => {
     try {
-        const { startDate, endDate } = req.query; // Added date filtering
+        const { startDate, endDate, status } = req.query;
         let query = {};
 
-        // Add date filtering if provided
         if (startDate && endDate) {
             query.startDate = { $gte: new Date(startDate) };
             query.endDate = { $lte: new Date(endDate) };
         }
+        if (status) {
+            query.status = status;
+        }
 
-        const leaves = await Leave.find(query).populate([
-            {
-                path: 'employee_id',
-                populate: [
-                    { path: 'department_id', select: 'department_name' },
-                    { path: 'user_id', select: 'name' }
-                ]
-            },
-            {
-                path: 'leave_setup_id',
-                select: 'leaveType'
-            }
-        ]).sort({ startDate: -1 }); // Sort by most recent first
+        const leaves = await Leave.find(query)
+            .populate([
+                {
+                    path: 'employee_id',
+                    populate: [
+                        { path: 'department_id', select: 'department_name' },
+                        { path: 'user_id', select: 'name email' }
+                    ]
+                },
+                {
+                    path: 'leave_setup_id',
+                    select: 'leaveType maxDays'
+                }
+            ])
+            .sort({ createdAt: -1 });
 
         return res.status(200).json({ success: true, leaves });
 
     } catch (error) {
-        console.error("All leaves fetch error:", error.message);
+        console.error("All leaves fetch error:", error);
         return res.status(500).json({ 
             success: false, 
             error: "Server error while fetching all leaves" 
@@ -174,33 +263,38 @@ const getLeaves = async (req, res) => {
     }
 };
 
-// Get details of a specific leave request (updated)
+// Get leave details
 const getLeaveDetail = async (req, res) => {
     try {
         const { id } = req.params;
-        const leave = await Leave.findById(id).populate({
-            path: 'employee_id',
-            populate: [
-                { path: 'department_id', select: 'department_name' },
-                { path: 'user_id', select: 'name profileImage' }
-            ]
-        });
+        const leave = await Leave.findById(id)
+            .populate({
+                path: 'employee_id',
+                populate: [
+                    { path: 'department_id', select: 'department_name' },
+                    { path: 'user_id', select: 'name email profileImage' }
+                ]
+            })
+            .populate('leave_setup_id', 'leaveType maxDays description');
 
         if (!leave) {
-            return res.status(404).json({ success: false, error: "Leave request not found" });
+            return res.status(404).json({ 
+                success: false, 
+                error: "Leave request not found" 
+            });
         }
 
-        // Format dates for better readability if needed
-        const formattedLeave = {
-            ...leave._doc,
-            startDate: leave.startDate.toISOString().split('T')[0],
-            endDate: leave.endDate.toISOString().split('T')[0]
-        };
-
-        return res.status(200).json({ success: true, leave: formattedLeave });
+        return res.status(200).json({ 
+            success: true, 
+            leave: {
+                ...leave._doc,
+                startDate: leave.startDate.toISOString().split('T')[0],
+                endDate: leave.endDate.toISOString().split('T')[0]
+            }
+        });
 
     } catch (error) {
-        console.error("Leave detail error:", error.message);
+        console.error("Leave detail error:", error);
         return res.status(500).json({ 
             success: false, 
             error: "Server error while fetching leave details" 
@@ -208,55 +302,53 @@ const getLeaveDetail = async (req, res) => {
     }
 };
 
-// Update leave status (including date changes if needed)
+// Update leave status
 const updateLeave = async (req, res) => {
     try {
         const { id } = req.params;
         const { status, startDate, endDate, reason } = req.body;
 
-        // Find the existing leave
         const existingLeave = await Leave.findById(id);
         if (!existingLeave) {
-            return res.status(404).json({ success: false, error: "Leave request not found" });
+            return res.status(404).json({ 
+                success: false, 
+                error: "Leave request not found" 
+            });
         }
 
-        // Prepare update object
         const updateData = {};
-
-        // Only allow status updates if provided
         if (status && ["Pending", "Approved", "Rejected"].includes(status)) {
             updateData.status = status;
         }
 
-        // Handle date updates if provided
         if (startDate || endDate) {
             const newStartDate = startDate ? new Date(startDate) : existingLeave.startDate;
             const newEndDate = endDate ? new Date(endDate) : existingLeave.endDate;
 
-            // Validate new dates
             try {
                 const numOfDays = calculateLeaveDays(newStartDate, newEndDate);
                 updateData.startDate = newStartDate;
                 updateData.endDate = newEndDate;
                 updateData.numOfDays = numOfDays;
             } catch (error) {
-                return res.status(400).json({ success: false, error: error.message });
+                return res.status(400).json({ 
+                    success: false, 
+                    error: error.message 
+                });
             }
         }
 
-        // Update reason if provided
         if (reason) {
             updateData.reason = reason;
         }
 
-        // Update the leave
         const updatedLeave = await Leave.findByIdAndUpdate(
             id,
             updateData,
             { new: true, runValidators: true }
         ).populate({
             path: 'employee_id',
-            populate: { path: 'user_id', select: 'name' }
+            populate: { path: 'user_id', select: 'name email' }
         });
 
         return res.status(200).json({ 
@@ -266,7 +358,7 @@ const updateLeave = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Leave update error:", error.message);
+        console.error("Leave update error:", error);
         return res.status(500).json({ 
             success: false, 
             error: "Server error while updating leave" 
@@ -274,4 +366,11 @@ const updateLeave = async (req, res) => {
     }
 };
 
-export { addLeave, getLeave, getLeaves, getLeaveDetail, updateLeave };
+export { 
+    addLeave, 
+    getLeave, 
+    getLeaves, 
+    getLeaveDetail, 
+    updateLeave,
+    getLeaveHistory 
+};
