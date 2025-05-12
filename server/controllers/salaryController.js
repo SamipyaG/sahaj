@@ -17,11 +17,11 @@ const TAX_BRACKETS = [
 const calculateTax = (annualSalary) => {
   let tax = 0;
   let remainingSalary = annualSalary;
-  
+
   for (let i = 1; i < TAX_BRACKETS.length; i++) {
-    const prevBracket = TAX_BRACKETS[i-1];
+    const prevBracket = TAX_BRACKETS[i - 1];
     const currentBracket = TAX_BRACKETS[i];
-    
+
     if (remainingSalary > prevBracket.limit) {
       const taxableAmount = Math.min(remainingSalary, currentBracket.limit) - prevBracket.limit;
       tax += taxableAmount * currentBracket.rate;
@@ -29,7 +29,7 @@ const calculateTax = (annualSalary) => {
       break;
     }
   }
-  
+
   return tax;
 };
 
@@ -135,14 +135,32 @@ export const initSalaryCronJob = () => {
 // Get salary payment status
 export const getPaidStatus = async (req, res) => {
   try {
-    const twelveMonthsAgo = new Date();
-    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11);
-    twelveMonthsAgo.setDate(1);
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1; // 1-12
 
-    const status = await Salary.aggregate([
+    // Set the date 10 months ago (11 months total including current)
+    const elevenMonthsAgo = new Date(now);
+    elevenMonthsAgo.setMonth(elevenMonthsAgo.getMonth() - 10);
+    elevenMonthsAgo.setDate(1);
+    elevenMonthsAgo.setHours(0, 0, 0, 0);
+
+    const allMonths = [];
+    const tempDate = new Date(elevenMonthsAgo);
+
+    while (tempDate <= now) {
+      allMonths.push({
+        year: tempDate.getFullYear(),
+        month: tempDate.getMonth() + 1,
+        monthName: tempDate.toLocaleString('default', { month: 'long' })
+      });
+      tempDate.setMonth(tempDate.getMonth() + 1);
+    }
+
+    const processedData = await Salary.aggregate([
       {
         $match: {
-          pay_date: { $gte: twelveMonthsAgo }
+          pay_date: { $gte: elevenMonthsAgo, $lte: now }
         }
       },
       {
@@ -154,30 +172,44 @@ export const getPaidStatus = async (req, res) => {
           count: { $sum: 1 },
           employees: {
             $push: {
-              name: "$employee_id.name",
-              employeeId: "$employee_id.employeeId"
+              name: "$employee_name",
+              employeeId: "$employee_id"
             }
           }
         }
-      },
-      { $sort: { "_id.year": -1, "_id.month": -1 } }
+      }
     ]);
 
-    const formatted = status.map((item, index) => ({
-      sn: index + 1,
-      year: item._id.year,
-      month: new Date(0, item._id.month - 1).toLocaleString('default', { month: 'long' }),
-      status: item.count > 0 ? 'Processed' : 'Pending',
-      paidCount: item.count,
-      employees: item.employees
-    }));
+    const formatted = allMonths.map((month, index) => {
+      const processedMonth = processedData.find(
+        item => item._id.year === month.year && item._id.month === month.month
+      );
 
-    res.status(200).json({ success: true, data: formatted });
+      return {
+        sn: index + 1,
+        year: month.year,
+        month: month.monthName,
+        monthNum: month.month,
+        status: processedMonth ? 'Processed' : 'Pending',
+        paidCount: processedMonth ? processedMonth.count : 0,
+        employees: processedMonth ? processedMonth.employees : []
+      };
+    }).sort((a, b) => {
+      if (a.year !== b.year) return b.year - a.year;
+      return b.monthNum - a.monthNum;
+    });
+
+    res.status(200).json({
+      success: true,
+      data: formatted
+    });
+
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ 
-      success: false, 
-      error: "Failed to fetch salary status" 
+    console.error("Salary Status Error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch salary status",
+      details: error.message
     });
   }
 };
@@ -188,44 +220,53 @@ export const getEmployeeSalaries = async (req, res) => {
     const { id } = req.params;
     const { page = 1, limit = 10 } = req.query;
 
+    // First find the employee
     let employee = await Employee.findOne({
       $or: [
         { _id: mongoose.isValidObjectId(id) ? id : null },
-        { employeeId: id }
+        { employeeId: id },
+        { user_id: id }
       ]
     }).populate('designation_id');
 
     if (!employee) {
-      return res.status(404).json({ 
-        success: false, 
-        error: "Employee not found" 
+      return res.status(404).json({
+        success: false,
+        error: "Employee not found"
       });
     }
 
-    const options = {
-      page: parseInt(page),
-      limit: parseInt(limit),
-      sort: { pay_date: -1 },
-      populate: [
-        { path: 'employee_id', select: 'name employeeId' },
-        { path: 'designation_id', select: 'name basic_salary' }
-      ]
-    };
+    // Find salaries with proper population
+    const salaries = await Salary.find({ employee_id: employee._id })
+      .populate('designation_id', 'title basic_salary')
+      .sort({ pay_date: -1 })
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit));
 
-    const salaries = await Salary.paginate(
-      { employee_id: employee._id },
-      options
-    );
+    // Get total count for pagination
+    const total = await Salary.countDocuments({ employee_id: employee._id });
 
-    res.status(200).json({ 
-      success: true, 
-      data: salaries 
+    res.status(200).json({
+      success: true,
+      data: {
+        docs: salaries,
+        totalDocs: total,
+        limit: parseInt(limit),
+        totalPages: Math.ceil(total / limit),
+        page: parseInt(page),
+        pagingCounter: (page - 1) * limit + 1,
+        hasPrevPage: page > 1,
+        hasNextPage: page * limit < total,
+        prevPage: page > 1 ? page - 1 : null,
+        nextPage: page * limit < total ? page + 1 : null
+      }
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ 
-      success: false, 
-      error: "Failed to fetch salary records" 
+    console.error("Salary fetch error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch salary records",
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };

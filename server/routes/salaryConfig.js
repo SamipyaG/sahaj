@@ -1,7 +1,7 @@
 import express from 'express';
 import { getSalaryConfig, updateSalaryConfig } from '../controllers/salaryConfigController.js';
 import authMiddleware from '../middleware/authMiddlware.js';
-import authorize from '../middleware/authorizeMiddleware.js';
+
 import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
@@ -17,7 +17,6 @@ const configLimiter = rateLimit({
 router.get(
   '/',
   authMiddleware,
-  authorize(['admin']),
   getSalaryConfig
 );
 
@@ -25,7 +24,6 @@ router.get(
 router.put(
   '/',
   authMiddleware,
-  authorize(['admin']),
   configLimiter,
   updateSalaryConfig
 );
