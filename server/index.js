@@ -9,8 +9,8 @@ import salaryConfig from './routes/salaryConfig.js';
 import leaveRouter from './routes/leave.js';
 import settingRouter from './routes/setting.js';
 import dashboardRouter from './routes/dashboard.js';
-import designationRouter from './routes/designation.js'; 
-import leavesetupRouter from './routes/leavesetup.js'; 
+import designationRouter from './routes/designation.js';
+import leavesetupRouter from './routes/leavesetup.js';
 import connectToDatabase from './db/db.js';
 import { initSalaryCron } from './controllers/salaryConfigController.js';
 import dotenv from 'dotenv';
@@ -49,7 +49,7 @@ app.get('/api/health', (req, res) => {
 // Error handling
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ 
+  res.status(500).json({
     error: 'Internal Server Error',
     message: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
@@ -60,9 +60,9 @@ const startServer = async () => {
   try {
     await connectToDatabase();
     console.log('Database connected successfully');
-    
+
     await initSalaryCron();
-    
+
     app.listen(process.env.PORT, () => {
       console.log(`Server running on port ${process.env.PORT}`);
     });

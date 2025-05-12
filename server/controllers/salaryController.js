@@ -39,9 +39,12 @@ let activeCronJob = null;
 // Safe salary generation wrapper
 const safeSalaryGeneration = async () => {
   try {
+    console.log('Starting safe salary generation at:', new Date().toISOString());
     await generateMonthlySalaries();
+    console.log('Safe salary generation completed successfully at:', new Date().toISOString());
   } catch (error) {
     console.error('Error in salary generation:', error.message);
+    console.error('Error stack:', error.stack);
   }
 };
 
@@ -49,19 +52,30 @@ const safeSalaryGeneration = async () => {
 export const generateMonthlySalaries = async () => {
   try {
     console.log('Starting monthly salary generation...');
+    console.log('Current time:', new Date().toISOString());
+
     const employees = await Employee.find({ active: true })
       .populate('designation_id');
+
+    console.log(`Found ${employees.length} active employees`);
 
     const currentDate = new Date();
     const currentMonth = currentDate.getMonth();
     const currentYear = currentDate.getFullYear();
+    console.log(`Processing for month: ${currentMonth + 1}, year: ${currentYear}`);
 
     const usedSalaryIds = new Set(
       await Salary.distinct('salary_id')
     );
+    console.log(`Found ${usedSalaryIds.size} existing salary IDs`);
+
+    let processedCount = 0;
+    let skippedCount = 0;
 
     const salaryPromises = employees.map(async (employee) => {
       if (!employee.designation_id || new Date(employee.join_date) > currentDate) {
+        console.log(`Skipping employee ${employee._id}: No designation or joined after current date`);
+        skippedCount++;
         return;
       }
 
@@ -94,13 +108,20 @@ export const generateMonthlySalaries = async () => {
         });
 
         await newSalary.save();
+        processedCount++;
+        console.log(`Generated salary for employee ${employee._id} with salary ID: ${salaryId}`);
+      } else {
+        console.log(`Salary already exists for employee ${employee._id} for this month`);
+        skippedCount++;
       }
     });
 
     await Promise.all(salaryPromises);
     console.log('Monthly salary generation completed successfully');
+    console.log(`Processed: ${processedCount}, Skipped: ${skippedCount}, Total: ${employees.length}`);
   } catch (error) {
     console.error('Error in monthly salary generation:', error);
+    console.error('Error stack:', error.stack);
     throw error;
   }
 };
@@ -109,27 +130,33 @@ export const generateMonthlySalaries = async () => {
 const restartCronJob = async (config) => {
   if (activeCronJob) {
     activeCronJob.stop();
-    console.log('Stopped previous cron job');
+    console.log('Stopped previous cron job at:', new Date().toISOString());
   }
 
   if (config.schedule_type === 'monthly') {
-    activeCronJob = cron.schedule(`0 9 ${config.day_of_month} * *`, safeSalaryGeneration, {
+    const cronExpression = `0 9 ${config.day_of_month} * *`;
+    console.log(`Setting up monthly cron job with expression: ${cronExpression}`);
+    activeCronJob = cron.schedule(cronExpression, safeSalaryGeneration, {
       timezone: "Asia/Kolkata"
     });
     console.log(`Salary processing scheduled for day ${config.day_of_month} at 9 AM IST`);
   } else {
-    activeCronJob = cron.schedule(`*/${config.custom_minutes} * * * *`, safeSalaryGeneration, {
+    const cronExpression = `*/${config.custom_minutes} * * * *`;
+    console.log(`Setting up test mode cron job with expression: ${cronExpression}`);
+    activeCronJob = cron.schedule(cronExpression, safeSalaryGeneration, {
       timezone: "Asia/Kolkata"
     });
     console.log(`Salary processing every ${config.custom_minutes} minutes (TEST MODE)`);
   }
 };
+
 export const initSalaryCronJob = () => {
+  console.log('Initializing salary cron job at:', new Date().toISOString());
   cron.schedule('0 9 28 * *', generateMonthlySalaries, {
     scheduled: true,
     timezone: "Asia/Kolkata"
   });
-  console.log('Salary cron job initialized');
+  console.log('Salary cron job initialized for 28th of every month at 9 AM IST');
 };
 
 // Get salary payment status
@@ -266,6 +293,68 @@ export const getEmployeeSalaries = async (req, res) => {
     res.status(500).json({
       success: false,
       error: "Failed to fetch salary records",
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Test endpoint to manually trigger salary generation
+export const testSalaryGeneration = async (req, res) => {
+  try {
+    console.log('Manually triggering salary generation at:', new Date().toISOString());
+    await generateMonthlySalaries();
+    res.status(200).json({
+      success: true,
+      message: 'Salary generation completed successfully'
+    });
+  } catch (error) {
+    console.error('Error in test salary generation:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate salaries',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Get monthly salary details
+export const getMonthlySalaryDetails = async (req, res) => {
+  try {
+    const { year, month } = req.params;
+
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0);
+
+    const salaries = await Salary.find({
+      pay_date: {
+        $gte: startDate,
+        $lte: endDate
+      }
+    })
+      .populate({
+        path: 'employee_id',
+        populate: [
+          { path: 'department_id', select: 'department_name' },
+          { path: 'user_id', select: 'name' }
+        ]
+      })
+      .populate('designation_id', 'title basic_salary')
+      .sort({ 'employee_id.user_id.name': 1 });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        year: parseInt(year),
+        month: new Date(year, month - 1).toLocaleString('default', { month: 'long' }),
+        monthNum: parseInt(month),
+        salaries
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching monthly salary details:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch monthly salary details',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }

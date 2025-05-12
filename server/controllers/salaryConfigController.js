@@ -24,7 +24,7 @@ const restartCronJob = async (config) => {
   // Schedule based on config type
   if (config.schedule_type === 'monthly') {
     activeCronJob = cron.schedule(
-      `0 9 ${config.day_of_month} * *`, 
+      `0 9 ${config.day_of_month} * *`,
       () => {
         console.log('Running scheduled salary generation');
         generateMonthlySalaries().catch(console.error);
@@ -58,18 +58,18 @@ const restartCronJob = async (config) => {
  */
 const validateConfig = (config) => {
   const errors = [];
-  
+
   if (!['monthly', 'custom'].includes(config.schedule_type)) {
     errors.push('Invalid schedule type');
   }
 
-  if (config.schedule_type === 'monthly' && 
-      (config.day_of_month < 1 || config.day_of_month > 28)) {
+  if (config.schedule_type === 'monthly' &&
+    (config.day_of_month < 1 || config.day_of_month > 28)) {
     errors.push('Day of month must be between 1-28');
   }
 
-  if (config.schedule_type === 'custom' && 
-      (config.custom_minutes < 1 || config.custom_minutes > 1440)) {
+  if (config.schedule_type === 'custom' &&
+    (config.custom_minutes < 1 || config.custom_minutes > 1440)) {
     errors.push('Custom interval must be 1-1440 minutes');
   }
 
@@ -150,11 +150,11 @@ export const updateSalaryConfig = async (req, res) => {
     const config = await SalaryConfig.findOneAndUpdate(
       {},
       updateData,
-      { 
+      {
         new: true,
         upsert: true,
         setDefaultsOnInsert: true,
-        lean: true 
+        lean: true
       }
     );
 
@@ -205,7 +205,7 @@ export const initSalaryCron = async () => {
 
   } catch (error) {
     console.error('Failed to initialize salary cron:', error);
-    
+
     // Fallback to safe defaults
     await restartCronJob({
       schedule_type: 'monthly',
