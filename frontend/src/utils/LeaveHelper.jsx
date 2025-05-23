@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/authContext";
 
 export const columns = [
   {
@@ -45,9 +46,14 @@ export const columns = [
 
 export const LeaveButtons = ({ Id }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const handleView = (id) => {
-    navigate(`/admin-dashboard/leaves/${id}`);
+    if (user.role === 'admin') {
+      navigate(`/admin-dashboard/leaves/${id}`);
+    } else {
+      navigate(`/employee-dashboard/leaves/${id}`);
+    }
   };
 
   return (

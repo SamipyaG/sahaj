@@ -13,10 +13,14 @@ import {
   FaClock,
   FaCalendarTimes,
   FaUserTie,
-  FaSitemap
+  FaSitemap,
+  FaMoneyBillWave,
+  FaTimes
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import LeavePieChart from "../leave/LeavePieChart";
+import EmployeeLeaveChart from "../leave/EmployeeLeaveChart";
 
 const AdminSummary = () => {
   const [summary, setSummary] = useState(null);
@@ -30,13 +34,13 @@ const AdminSummary = () => {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         });
-        console.log(summary.data);
+        console.log('Dashboard summary:', summary.data);
         setSummary(summary.data);
       } catch (error) {
+        console.error('Error fetching dashboard summary:', error);
         if (error.response) {
           alert(error.response.data.error);
         }
-        console.log(error.message);
       }
     };
     fetchSummary();
@@ -86,6 +90,7 @@ const AdminSummary = () => {
         </div>
       </div>
 
+      {/* Leave Summary Cards */}
       <div className="mt-14">
         <h4 className="text-center text-3xl font-bold text-blue-900 mb-10">Leave Details</h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -127,7 +132,7 @@ const AdminSummary = () => {
             className="cursor-pointer transform transition-transform hover:scale-105"
           >
             <SummaryCard
-              icon={<FaCalendarTimes className="text-5xl text-white" />}
+              icon={<FaTimes className="text-5xl text-white" />}
               text="Leave Rejected"
               number={summary.leaveSummary.rejected}
               color="bg-red-600 hover:bg-red-700 shadow-lg"
