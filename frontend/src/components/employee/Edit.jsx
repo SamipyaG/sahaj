@@ -37,14 +37,11 @@ const EditEmployee = () => {
     const fetchEmployee = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(
-          `http://localhost:5000/api/employee/${id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
+        const response = await axios.get(`http://localhost:5000/api/employees/${id}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
 
         if (response.data.success) {
           const emp = response.data.data;
@@ -180,7 +177,7 @@ const EditEmployee = () => {
               Update the employee information as needed
             </p>
           </div>
-          
+
           <form onSubmit={handleSubmit} className="p-6">
             <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2">
               {/* Name Field */}
@@ -260,9 +257,8 @@ const EditEmployee = () => {
                     value={employee.designation}
                     onChange={handleChange}
                     disabled={!employee.department}
-                    className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border ${
-                      !employee.department ? "bg-gray-100" : ""
-                    }`}
+                    className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border ${!employee.department ? "bg-gray-100" : ""
+                      }`}
                     required
                   >
                     <option value="">Select Designation</option>
@@ -293,11 +289,10 @@ const EditEmployee = () => {
               <button
                 type="submit"
                 disabled={updating}
-                className={`inline-flex items-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
-                  updating
-                    ? "bg-indigo-400 cursor-not-allowed"
-                    : "bg-indigo-600 hover:bg-indigo-700"
-                }`}
+                className={`inline-flex items-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${updating
+                  ? "bg-indigo-400 cursor-not-allowed"
+                  : "bg-indigo-600 hover:bg-indigo-700"
+                  }`}
               >
                 {updating ? (
                   <>

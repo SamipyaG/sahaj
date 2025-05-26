@@ -12,7 +12,7 @@ const DepartmentList = () => {
   const fetchDepartments = useCallback(async () => {
     setDepLoading(true);
     try {
-      const response = await axios.get(`http://localhost:5000/api/department`, {
+      const response = await axios.get("http://localhost:5000/api/departments", {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },

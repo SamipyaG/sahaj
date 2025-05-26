@@ -16,9 +16,14 @@ const EmployeeSalaryView = () => {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         }
       });
-      setSalaries(response.data.success ? response.data.data.docs : []);
-      console.log(salaries)
+      console.log('API Response:', response.data); // Debug log
+      if (response.data.success) {
+        setSalaries(response.data.data.docs || []);
+      } else {
+        setError(response.data.error || 'Failed to fetch salary records');
+      }
     } catch (err) {
+      console.error('Error fetching salaries:', err); // Debug log
       setError(err.response?.data?.error || 'Failed to fetch salary records');
     } finally {
       setLoading(false);
@@ -49,7 +54,7 @@ const EmployeeSalaryView = () => {
   return (
     <div className="overflow-x-auto p-5">
       <h2 className="text-2xl font-bold mb-4">Salary History</h2>
-      
+
       {salaries.length === 0 ? (
         <div className="text-center p-5">No salary records found</div>
       ) : (
@@ -59,26 +64,39 @@ const EmployeeSalaryView = () => {
               <th className="py-2 px-4 border">S.N.</th>
               <th className="py-2 px-4 border">Salary ID</th>
               <th className="py-2 px-4 border">Basic Salary</th>
+              <th className="py-2 px-4 border">Allowances</th>
+              <th className="py-2 px-4 border">Deductions</th>
               <th className="py-2 px-4 border">Tax</th>
               <th className="py-2 px-4 border">Net Salary</th>
               <th className="py-2 px-4 border">Pay Date</th>
             </tr>
           </thead>
           <tbody>
-            {salaries.map((salary, index) => (
-              <tr key={salary._id} className="hover:bg-gray-50">
-                <td className="py-2 px-4 border text-center">{index + 1}</td>
-                <td className="py-2 px-4 border text-center">{salary.salary_id}</td>
-                <td className="py-2 px-4 border text-right">₹{salary.designation_id.basic_salary.toFixed(2)}</td>
-                <td className="py-2 px-4 border text-right text-red-500">-₹{salary.tax.toFixed(2)}</td>
-                <td className="py-2 px-4 border text-right font-medium text-green-600">
-                  ₹{(salary.designation_id.basic_salary - salary.tax).toFixed(2)}
-                </td>
-                <td className="py-2 px-4 border text-center">
-                  {new Date(salary.pay_date).toLocaleDateString()}
-                </td>
-              </tr>
-            ))}
+            {salaries.map((salary, index) => {
+              // Calculate net salary
+              const basicSalary = salary.designation_id?.basic_salary || 0;
+              const allowances = salary.allowances || 0;
+              const deductions = salary.deductions || 0;
+              const tax = salary.tax || 0;
+              const netSalary = basicSalary + allowances - deductions - tax;
+
+              return (
+                <tr key={salary._id} className="hover:bg-gray-50">
+                  <td className="py-2 px-4 border text-center">{index + 1}</td>
+                  <td className="py-2 px-4 border text-center">{salary.salary_id}</td>
+                  <td className="py-2 px-4 border text-right">₹{basicSalary.toFixed(2)}</td>
+                  <td className="py-2 px-4 border text-right text-green-500">+₹{allowances.toFixed(2)}</td>
+                  <td className="py-2 px-4 border text-right text-red-500">-₹{deductions.toFixed(2)}</td>
+                  <td className="py-2 px-4 border text-right text-red-500">-₹{tax.toFixed(2)}</td>
+                  <td className="py-2 px-4 border text-right font-medium text-green-600">
+                    ₹{netSalary.toFixed(2)}
+                  </td>
+                  <td className="py-2 px-4 border text-center">
+                    {new Date(salary.pay_date).toLocaleDateString()}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       )}

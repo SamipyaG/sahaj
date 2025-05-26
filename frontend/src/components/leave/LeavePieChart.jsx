@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Pie } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   ArcElement,
   Tooltip,
-  Legend
+  Legend,
+  Title
 } from 'chart.js';
 import { useAuth } from '../../context/authContext';
 
@@ -13,7 +14,8 @@ import { useAuth } from '../../context/authContext';
 ChartJS.register(
   ArcElement,
   Tooltip,
-  Legend
+  Legend,
+  Title
 );
 
 const LeavePieChart = ({ isAdmin = false }) => {
@@ -21,6 +23,42 @@ const LeavePieChart = ({ isAdmin = false }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [stats, setStats] = useState(null);
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [selectedDepartment, setSelectedDepartment] = useState('all');
+  const [selectedLeaveType, setSelectedLeaveType] = useState('all');
+  const [departments, setDepartments] = useState([]);
+  const [leaveTypes, setLeaveTypes] = useState([]);
+
+  useEffect(() => {
+    const fetchFilters = async () => {
+      try {
+        const [departmentsRes, leaveTypesRes] = await Promise.all([
+          axios.get('http://localhost:5000/api/departments', {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`
+            }
+          }),
+          axios.get('http://localhost:5000/api/leave-setup', {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`
+            }
+          })
+        ]);
+
+        if (departmentsRes.data.success) {
+          setDepartments(departmentsRes.data.departments);
+        }
+        if (leaveTypesRes.data.success) {
+          setLeaveTypes(leaveTypesRes.data.leaveSetups);
+        }
+
+      } catch (err) {
+        console.error('Error fetching filter data:', err);
+      }
+    };
+
+    fetchFilters();
+  }, []);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -28,29 +66,31 @@ const LeavePieChart = ({ isAdmin = false }) => {
         setLoading(true);
         setError(null);
 
-        const endpoint = isAdmin
-          ? 'http://localhost:5000/api/leave/stats'
-          : `http://localhost:5000/api/leave/stats/employee/${user._id}`;
+        const params = {};
+        if (year) params.year = year;
+        if (selectedDepartment !== 'all') params.departmentId = selectedDepartment;
+        if (selectedLeaveType !== 'all') params.leaveTypeId = selectedLeaveType;
 
-        console.log('Fetching stats from:', endpoint);
-        console.log('Auth token:', localStorage.getItem('token'));
+        // If not admin, fetch only employee's stats (if userId is available)
+        const endpoint = isAdmin ?
+          'http://localhost:5000/api/leave/stats' :
+          (user?._id ? `http://localhost:5000/api/leave/stats/employee/${user._id}` : null);
+
+        if (!endpoint) {
+          setLoading(false);
+          return;
+        }
 
         const response = await axios.get(endpoint, {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+          params: isAdmin ? params : {} // Only send filters for admin view
         });
 
-        console.log('Stats response:', response.data);
         if (response.data.success) {
-          if (!Array.isArray(response.data.stats)) {
-            console.error('Stats is not an array:', response.data.stats);
-            setError('Invalid data format received from server');
-            return;
-          }
           setStats(response.data.stats);
         } else {
-          console.error('Server returned error:', response.data.error);
           setError(response.data.error || 'Failed to fetch leave statistics');
         }
       } catch (err) {
@@ -66,10 +106,10 @@ const LeavePieChart = ({ isAdmin = false }) => {
       }
     };
 
-    if (user?._id) {
+    if (isAdmin || user?._id) {
       fetchStats();
     }
-  }, [user, isAdmin]);
+  }, [user, isAdmin, year, selectedDepartment, selectedLeaveType]); // Add filters to dependency array
 
   if (loading) {
     return (
@@ -91,7 +131,7 @@ const LeavePieChart = ({ isAdmin = false }) => {
   if (!stats || stats.length === 0) {
     return (
       <div className="text-center p-8 bg-gray-50 rounded-lg">
-        <p className="text-gray-500">No leave data available</p>
+        <p className="text-gray-500">No leave data available for the selected filters.</p>
       </div>
     );
   }
@@ -141,6 +181,51 @@ const LeavePieChart = ({ isAdmin = false }) => {
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
+      <div className="flex justify-between items-center mb-4">
+        <h4 className="text-xl font-semibold">Leave Type Distribution</h4> {/* Adjusted heading */}
+        <div className="flex gap-4">
+          {/* Year Filter */}
+          <select
+            value={year}
+            onChange={(e) => setYear(Number(e.target.value))}
+            className="border rounded p-2 text-sm"
+          >
+            {[2023, 2024, 2025].map(y => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+          {/* Department Filter (Admin only) */}
+          {isAdmin && (
+            <select
+              value={selectedDepartment}
+              onChange={(e) => setSelectedDepartment(e.target.value)}
+              className="border rounded p-2 text-sm"
+            >
+              <option value="all">All Departments</option>
+              {departments.map((dept) => (
+                <option key={dept._id} value={dept._id}>
+                  {dept.department_name}
+                </option>
+              ))}
+            </select>
+          )}
+          {/* Leave Type Filter (Admin only) */}
+          {isAdmin && (
+            <select
+              value={selectedLeaveType}
+              onChange={(e) => setSelectedLeaveType(e.target.value)}
+              className="border rounded p-2 text-sm"
+            >
+              <option value="all">All Leave Types</option>
+              {leaveTypes.map((type) => (
+                <option key={type._id} value={type._id}>
+                  {type.leaveType}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="h-[400px] flex items-center justify-center">
           <Pie data={chartData} options={chartOptions} />

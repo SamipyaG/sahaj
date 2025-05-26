@@ -58,6 +58,10 @@ export const generateMonthlySalaries = async () => {
       .populate('designation_id');
 
     console.log(`Found ${employees.length} active employees`);
+    if (employees.length === 0) {
+      console.log('No active employees found. Please add employees first.');
+      return;
+    }
 
     const currentDate = new Date();
     const currentMonth = currentDate.getMonth();
@@ -72,11 +76,15 @@ export const generateMonthlySalaries = async () => {
     let processedCount = 0;
     let skippedCount = 0;
 
-    const salaryPromises = employees.map(async (employee) => {
+    for (const employee of employees) {
+      console.log(`Processing employee: ${employee._id}`);
+      console.log(`Employee designation: ${employee.designation_id ? employee.designation_id.title : 'None'}`);
+      console.log(`Employee join date: ${employee.join_date}`);
+
       if (!employee.designation_id || new Date(employee.join_date) > currentDate) {
         console.log(`Skipping employee ${employee._id}: No designation or joined after current date`);
         skippedCount++;
-        return;
+        continue;
       }
 
       const existingSalary = await Salary.findOne({
@@ -87,36 +95,43 @@ export const generateMonthlySalaries = async () => {
         }
       });
 
-      if (!existingSalary) {
-        let salaryId;
-        do {
-          salaryId = Math.floor(100000 + Math.random() * 900000);
-        } while (usedSalaryIds.has(salaryId));
-        usedSalaryIds.add(salaryId);
-
-        const annualSalary = employee.designation_id.basic_salary * 12;
-        const monthlyTax = calculateTax(annualSalary) / 12;
-
-        const newSalary = new Salary({
-          employee_id: employee._id,
-          designation_id: employee.designation_id._id,
-          salary_id: salaryId,
-          pay_date: new Date(currentYear, currentMonth, 28),
-          tax: monthlyTax,
-          allowances: employee.allowances || 0,
-          deductions: employee.deductions || 0
-        });
-
-        await newSalary.save();
-        processedCount++;
-        console.log(`Generated salary for employee ${employee._id} with salary ID: ${salaryId}`);
-      } else {
+      if (existingSalary) {
         console.log(`Salary already exists for employee ${employee._id} for this month`);
         skippedCount++;
+        continue;
       }
-    });
 
-    await Promise.all(salaryPromises);
+      let salaryId;
+      do {
+        salaryId = Math.floor(100000 + Math.random() * 900000);
+      } while (usedSalaryIds.has(salaryId));
+      usedSalaryIds.add(salaryId);
+
+      const annualSalary = employee.designation_id.basic_salary * 12;
+      const monthlyTax = calculateTax(annualSalary) / 12;
+
+      console.log(`Generating salary for employee ${employee._id}:`);
+      console.log(`- Basic Salary: ${employee.designation_id.basic_salary}`);
+      console.log(`- Annual Salary: ${annualSalary}`);
+      console.log(`- Monthly Tax: ${monthlyTax}`);
+      console.log(`- Allowances: ${employee.allowances || 0}`);
+      console.log(`- Deductions: ${employee.deductions || 0}`);
+
+      const newSalary = new Salary({
+        employee_id: employee._id,
+        designation_id: employee.designation_id._id,
+        salary_id: salaryId,
+        pay_date: new Date(currentYear, currentMonth, 28),
+        tax: monthlyTax,
+        allowances: employee.allowances || 0,
+        deductions: employee.deductions || 0
+      });
+
+      await newSalary.save();
+      processedCount++;
+      console.log(`Successfully generated salary for employee ${employee._id} with salary ID: ${salaryId}`);
+    }
+
     console.log('Monthly salary generation completed successfully');
     console.log(`Processed: ${processedCount}, Skipped: ${skippedCount}, Total: ${employees.length}`);
   } catch (error) {
@@ -244,26 +259,29 @@ export const getPaidStatus = async (req, res) => {
 // Get employee salary history
 export const getEmployeeSalaries = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params; // This is the user_id
     const { page = 1, limit = 10 } = req.query;
 
-    // First find the employee
-    let employee = await Employee.findOne({
-      $or: [
-        { _id: mongoose.isValidObjectId(id) ? id : null },
-        { employeeId: id },
-        { user_id: id }
-      ]
-    }).populate('designation_id');
+    // Validate ID format
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid user ID format"
+      });
+    }
+
+    // First find the employee using user_id
+    const employee = await Employee.findOne({ user_id: id })
+      .populate('designation_id', 'title basic_salary');
 
     if (!employee) {
       return res.status(404).json({
         success: false,
-        error: "Employee not found"
+        error: "Employee not found for this user"
       });
     }
 
-    // Find salaries with proper population
+    // Get paginated salary records using employee._id
     const salaries = await Salary.find({ employee_id: employee._id })
       .populate('designation_id', 'title basic_salary')
       .sort({ pay_date: -1 })
@@ -273,27 +291,23 @@ export const getEmployeeSalaries = async (req, res) => {
     // Get total count for pagination
     const total = await Salary.countDocuments({ employee_id: employee._id });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: {
         docs: salaries,
-        totalDocs: total,
-        limit: parseInt(limit),
-        totalPages: Math.ceil(total / limit),
+        total,
         page: parseInt(page),
-        pagingCounter: (page - 1) * limit + 1,
-        hasPrevPage: page > 1,
-        hasNextPage: page * limit < total,
-        prevPage: page > 1 ? page - 1 : null,
-        nextPage: page * limit < total ? page + 1 : null
+        limit: parseInt(limit),
+        pages: Math.ceil(total / limit)
       }
     });
+
   } catch (error) {
-    console.error("Salary fetch error:", error);
-    res.status(500).json({
+    console.error("Error in getEmployeeSalaries:", error);
+    return res.status(500).json({
       success: false,
-      error: "Failed to fetch salary records",
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: "Failed to fetch employee salaries",
+      details: error.message
     });
   }
 };
@@ -301,7 +315,7 @@ export const getEmployeeSalaries = async (req, res) => {
 // Test endpoint to manually trigger salary generation
 export const testSalaryGeneration = async (req, res) => {
   try {
-    console.log('Manually triggering salary generation at:', new Date().toISOString());
+    console.log('Manual salary generation triggered');
     await generateMonthlySalaries();
     res.status(200).json({
       success: true,
@@ -312,7 +326,7 @@ export const testSalaryGeneration = async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to generate salaries',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      details: error.message
     });
   }
 };

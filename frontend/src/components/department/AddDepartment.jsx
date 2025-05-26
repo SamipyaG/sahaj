@@ -42,9 +42,9 @@ const AddDepartment = () => {
 
             // Proceed with adding department
             const response = await axios.post(
-                `http://localhost:5000/api/department/add`,
-                { 
-                    ...department, 
+                `http://localhost:5000/api/departments`,
+                {
+                    ...department,
                     paid_leave: 16  // Always set paid_leave to 16 but don't show in UI
                 },
                 {

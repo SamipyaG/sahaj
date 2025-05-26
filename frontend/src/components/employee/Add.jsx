@@ -66,12 +66,12 @@ const AddEmployee = () => {
     if (formData.department_id && formData.designation_id) {
       const department = departments.find(d => d._id === formData.department_id);
       const designation = designations.find(d => d._id === formData.designation_id);
-      
+
       if (department && designation) {
         const deptPrefix = department.department_name.substring(0, 2).toUpperCase();
         const desigPrefix = designation.title.substring(0, 2).toUpperCase();
         const paddedSerial = serialNumber.toString().padStart(4, '0');
-        
+
         const generatedId = `${deptPrefix}-${desigPrefix}-${paddedSerial}`;
         setFormData(prev => ({ ...prev, employee_id: generatedId }));
       }
@@ -99,16 +99,12 @@ const AddEmployee = () => {
     });
 
     try {
-      const response = await axios.post(
-        'http://localhost:5000/api/employee/add',
-        formDataObj,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
+      setLoading(true);
+      const response = await axios.post("http://localhost:5000/api/employees", formDataObj, {
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
         }
-      );
+      });
 
       if (response.data.success) {
         alert('Employee added successfully!');
@@ -116,7 +112,7 @@ const AddEmployee = () => {
       }
     } catch (err) {
       console.error('Error adding employee:', err);
-      
+
       if (err.response) {
         if (err.response.data.details) {
           setError(err.response.data.details.join('\n'));
@@ -136,7 +132,7 @@ const AddEmployee = () => {
   return (
     <div className="max-w-4xl mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
       <h2 className="text-2xl font-bold mb-6">Add New Employee</h2>
-      
+
       {error && (
         <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
           {error}
@@ -336,9 +332,8 @@ const AddEmployee = () => {
         <button
           type="submit"
           disabled={loading}
-          className={`w-full mt-6 ${
-            loading ? 'bg-gray-400' : 'bg-teal-600 hover:bg-teal-700'
-          } text-white font-bold py-2 px-4 rounded`}
+          className={`w-full mt-6 ${loading ? 'bg-gray-400' : 'bg-teal-600 hover:bg-teal-700'
+            } text-white font-bold py-2 px-4 rounded`}
         >
           {loading ? 'Adding Employee...' : 'Add Employee'}
         </button>

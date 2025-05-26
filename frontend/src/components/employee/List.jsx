@@ -8,61 +8,65 @@ const List = () => {
   const [employees, setEmployees] = useState([]);
   const [empLoading, setEmpLoading] = useState(false);
   const [filteredEmployees, setFilteredEmployees] = useState([]);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchEmployees = async () => {
       setEmpLoading(true);
       try {
-        const response = await axios.get(`http://localhost:5000/api/employee`, {
+        setError(null);
+        console.log('Fetching employees from /api/employees...'); // Debug log
+        const response = await axios.get("http://localhost:5000/api/employees", {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         });
 
-        console.log("API Response:", response.data); // Debug log
+        console.log('API Response for employees:', response.data); // Debug log
 
         if (response.data.success) {
 
+          console.log('Processing employee data:', response.data.data); // Debug log
           let sno = 1;
-          const data = response.data.data.map((emp) => { 
+          const data = response.data.data.map((emp) => {
             console.log((emp.user?.profileImage || emp.user_id?.profileImage)
-            ? `http://localhost:5000/${emp.user?.profileImage || emp.user_id?.profileImage}`
-            : "/default-profile.png")
+              ? `http://localhost:5000/${emp.user?.profileImage || emp.user_id?.profileImage}`
+              : "/default-profile.png")
             return ({
-            _id: emp._id,
-            sno: sno++,
-            department_name: emp.department_name || emp.department_id?.department_name || "N/A",
-            name: emp.employee_name || emp.user?.name || emp.user_id?.name || "Unknown",
-            dob: emp.date_of_birth ? new Date(emp.date_of_birth).toLocaleDateString() : "N/A",
-            profileImage: (
-              <img
-                width={40}
-                className="rounded-full" crossorigin="anonymous"
-                src={
-                  (emp.user?.profileImage || emp.user_id?.profileImage)
-                    ? `http://localhost:5000/${emp.user?.profileImage || emp.user_id?.profileImage}`
-                    : "/default-profile.png"
-                }
-                alt={`${emp.employee_name}'s Profile`}
-                onError={(e) => {
-                  e.target.src = "/default-profile.png";
-                }}
-              />
-            ),
-            action: <EmployeeButtons Id={emp._id} />,
-            
-          })});
+              _id: emp._id,
+              sno: sno++,
+              department_name: emp.department_name || emp.department_id?.department_name || "N/A",
+              name: emp.employee_name || emp.user?.name || emp.user_id?.name || "Unknown",
+              dob: emp.date_of_birth ? new Date(emp.date_of_birth).toLocaleDateString() : "N/A",
+              profileImage: (
+                <img
+                  width={40}
+                  className="rounded-full" crossorigin="anonymous"
+                  src={
+                    (emp.user?.profileImage || emp.user_id?.profileImage)
+                      ? `http://localhost:5000/${emp.user?.profileImage || emp.user_id?.profileImage}`
+                      : "/default-profile.png"
+                  }
+                  alt={`${emp.employee_name}'s Profile`}
+                  onError={(e) => {
+                    e.target.src = "/default-profile.png";
+                  }}
+                />
+              ),
+              action: <EmployeeButtons Id={emp._id} onEmployeeDelete={fetchEmployees} />,
 
+            })
+          });
+
+          console.log('Transformed employee data for table:', data); // Debug log
           setEmployees(data);
           setFilteredEmployees(data);
+        } else {
+          setError(response.data.error || 'Failed to fetch employees');
         }
       } catch (error) {
         console.error("Error fetching employees:", error);
-        if (error.response && !error.response.data.success) {
-          alert(error.response.data.error || "Failed to fetch employees");
-        } else {
-          alert("An error occurred while fetching employees");
-        }
+        setError(error.response?.data?.error || 'An error occurred while fetching employees');
       } finally {
         setEmpLoading(false);
       }
@@ -81,6 +85,14 @@ const List = () => {
 
   if (empLoading) {
     return <div className="text-center p-4">Loading employees...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="text-center p-4 text-red-600">
+        Error: {error}
+      </div>
+    );
   }
 
   return (

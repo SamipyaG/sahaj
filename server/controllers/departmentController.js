@@ -17,9 +17,9 @@ const addDepartment = async (req, res) => {
 
         // Validate required fields
         if (!department_id || !department_name || !department_description) {
-            return res.status(400).json({ 
-                success: false, 
-                error: "Department ID, name, and description are required" 
+            return res.status(400).json({
+                success: false,
+                error: "Department ID, name, and description are required"
             });
         }
 
@@ -30,8 +30,8 @@ const addDepartment = async (req, res) => {
         }
 
         // Create new department
-        const newDep = new Department({ 
-            department_id, 
+        const newDep = new Department({
+            department_id,
             department_name,
             department_description,
             paid_leave: paid_leave || 16 // Default to 16 if not provided

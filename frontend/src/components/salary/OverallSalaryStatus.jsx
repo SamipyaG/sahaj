@@ -7,6 +7,7 @@ const OverallSalaryStatus = () => {
   const [error, setError] = useState(null);
   const [salaryStatus, setSalaryStatus] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState(null);
+  const [generating, setGenerating] = useState(false);
 
   const fetchSalaryStatus = async () => {
     try {
@@ -16,11 +17,34 @@ const OverallSalaryStatus = () => {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         }
       });
+      console.log('Salary status response:', response.data);
       setSalaryStatus(response.data.data);
     } catch (err) {
+      console.error('Error fetching salary status:', err);
       setError(err.response?.data?.error || 'Failed to fetch salary status');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGenerateSalaries = async () => {
+    try {
+      setGenerating(true);
+      const response = await axios.post('http://localhost:5000/api/salary/test-generate', {}, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      console.log('Salary generation response:', response.data);
+      if (response.data.success) {
+        // Refresh the salary status after generation
+        await fetchSalaryStatus();
+      }
+    } catch (err) {
+      console.error('Error generating salaries:', err);
+      setError(err.response?.data?.error || 'Failed to generate salaries');
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -32,8 +56,10 @@ const OverallSalaryStatus = () => {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         }
       });
+      console.log('Monthly details response:', response.data);
       setSelectedMonth(response.data.data);
     } catch (err) {
+      console.error('Error fetching monthly details:', err);
       setError(err.response?.data?.error || 'Failed to fetch monthly salary details');
     } finally {
       setLoading(false);
@@ -56,13 +82,38 @@ const OverallSalaryStatus = () => {
     return (
       <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4">
         <p>{error}</p>
+        <button
+          onClick={() => setError(null)}
+          className="mt-2 text-red-700 hover:text-red-900"
+        >
+          Dismiss
+        </button>
       </div>
     );
   }
 
   return (
     <div className="container mx-auto p-4">
-      <h2 className="text-2xl font-bold mb-6">Salary Payment Status</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold">Salary Payment Status</h2>
+        <button
+          onClick={handleGenerateSalaries}
+          disabled={generating}
+          className={`px-4 py-2 rounded-md text-white ${generating
+            ? 'bg-gray-400 cursor-not-allowed'
+            : 'bg-blue-500 hover:bg-blue-600'
+            }`}
+        >
+          {generating ? (
+            <span className="flex items-center">
+              <FaSpinner className="animate-spin mr-2" />
+              Generating...
+            </span>
+          ) : (
+            'Generate Salaries'
+          )}
+        </button>
+      </div>
 
       {/* Monthly Status Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden mb-8">
@@ -136,36 +187,38 @@ const OverallSalaryStatus = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {selectedMonth.salaries.map((salary, index) => (
+                  {console.log('selectedMonth data in modal:', selectedMonth)}
+                  {console.log('Salaries array in modal:', selectedMonth?.salaries)}
+                  {selectedMonth?.salaries?.map((salary, index) => (
                     <tr key={salary._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{index + 1}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {salary.employee_id.user_id.name}
+                        {salary.employee_id?.user_id?.name || 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {salary.employee_id.department_id.department_name}
+                        {salary.employee_id?.department_id?.department_name || 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {salary.designation_id.title}
+                        {salary.designation_id?.title || 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ₹{salary.designation_id.basic_salary.toFixed(2)}
+                        ₹{(salary.designation_id?.basic_salary || 0).toFixed(2)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600">
-                        -₹{salary.tax.toFixed(2)}
+                        -₹{(salary.tax || 0).toFixed(2)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">
-                        +₹{salary.allowances.toFixed(2)}
+                        +₹{(salary.allowances || 0).toFixed(2)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600">
-                        -₹{salary.deductions.toFixed(2)}
+                        -₹{(salary.deductions || 0).toFixed(2)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
                         ₹{(
-                          salary.designation_id.basic_salary +
-                          salary.allowances -
-                          salary.tax -
-                          salary.deductions
+                          (salary.designation_id?.basic_salary || 0) +
+                          (salary.allowances || 0) -
+                          (salary.tax || 0) -
+                          (salary.deductions || 0)
                         ).toFixed(2)}
                       </td>
                     </tr>

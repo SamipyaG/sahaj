@@ -9,31 +9,34 @@ export const columns = [
     width: "70px",
   },
   {
-    name: "Name",
-    selector: (row) => row.name,
-    sortable: true,
+    name: "Profile",
+    selector: (row) => row.profileImage,
     width: "100px",
   },
   {
-    name: "Image",
-    selector: (row) => row.profileImage,
-    width: "90px",
+    name: "Emp ID",
+    selector: (row) => row.employee_id,
+    width: "110px",
   },
   {
-    name: "Department",
-    selector: (row) => row.department_name,
+    name: "Name",
+    selector: (row) => row.name,
     width: "120px",
   },
   {
     name: "DOB",
     selector: (row) => row.dob,
-    sortable: true,
-    width: "130px",
+    width: "120px",
   },
   {
-    name: "Action",
+    name: "Department",
+    selector: (row) => row.department_name,
+    width: "150px",
+  },
+  {
+    name: "Actions",
     selector: (row) => row.action,
-    center: true, // Fix: "center" should not be a string
+    center: true,
   },
 ];
 
@@ -100,14 +103,51 @@ export const getEmployees = async (id) => {
   return [];
 };
 
-export const EmployeeButtons = ({ Id }) => {
+export const EmployeeButtons = ({ Id, onEmployeeDelete }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const handleView = (id) => {
+    if (user.role === 'admin') {
+      navigate(`/admin-dashboard/employees/${id}`);
+    } else {
+      // Assuming employees can view their own details on employee dashboard
+      // You might need a different route for employee view
+      navigate(`/employee-dashboard/employees/${id}`);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm("Are you sure you want to delete this employee?")) {
+      try {
+        // Call backend API to delete the employee
+        const response = await axios.delete(`http://localhost:5000/api/employees/${id}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+
+        if (response.data.success) {
+          alert("Employee deleted successfully!");
+          // Call the function passed from the parent to refresh the list
+          if (onEmployeeDelete) {
+            onEmployeeDelete();
+          }
+        } else {
+          alert(response.data.error || "Failed to delete employee");
+        }
+      } catch (error) {
+        console.error("Error deleting employee:", error);
+        alert(error.response?.data?.error || "An error occurred while deleting the employee");
+      }
+    }
+  };
 
   return (
     <div className="flex flex-wrap gap-3">
       <button
         className="px-3 py-1 bg-teal-600 text-white"
-        onClick={() => navigate(`/admin-dashboard/employees/${Id}`)}
+        onClick={() => handleView(Id)}
       >
         View
       </button>
@@ -117,7 +157,7 @@ export const EmployeeButtons = ({ Id }) => {
       >
         Edit
       </button>
-     
+
 
       <button
         className="px-3 py-1 bg-yellow-600 text-white"
@@ -131,6 +171,14 @@ export const EmployeeButtons = ({ Id }) => {
       >
         Leave
       </button>
+      {user.role === 'admin' && (
+        <button
+          className="px-4 py-1 bg-red-500 rounded text-white hover:bg-red-600"
+          onClick={() => handleDelete(Id)}
+        >
+          Delete
+        </button>
+      )}
     </div>
   );
 };

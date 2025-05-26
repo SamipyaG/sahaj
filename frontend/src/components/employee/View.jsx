@@ -15,7 +15,7 @@ const EmployeeList = () => {
         setLoading(true);
         setError(null);
 
-        const response = await axios.get(`http://localhost:5000/api/employee/${id}`, {
+        const response = await axios.get(`http://localhost:5000/api/employees/${id}`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
           },
@@ -29,7 +29,7 @@ const EmployeeList = () => {
         setLoading(false);
       }
     };
-    
+
     fetchEmployee();
   }, [id]);
 
@@ -137,7 +137,7 @@ const EmployeeList = () => {
                         e.target.src = '/default-profile.png';
                       }}
                     />
-                    
+
                   </div>
                 </dd>
               </div>
@@ -162,8 +162,8 @@ const EmployeeList = () => {
               <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                 <dt className="text-sm font-medium text-gray-500">Basic Salary</dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  {employee.basic_salary || employee.designation_id?.basic_salary 
-                    ? `$${(employee.basic_salary || employee.designation_id?.basic_salary).toLocaleString()}` 
+                  {employee.basic_salary || employee.designation_id?.basic_salary
+                    ? `$${(employee.basic_salary || employee.designation_id?.basic_salary).toLocaleString()}`
                     : 'N/A'}
                 </dd>
               </div>
@@ -204,7 +204,7 @@ const EmployeeList = () => {
         </div>
 
         <div className="mt-6 flex justify-end">
-          
+
         </div>
       </div>
     </div>

@@ -11,6 +11,7 @@ import settingRouter from './routes/setting.js';
 import dashboardRouter from './routes/dashboard.js';
 import designationRouter from './routes/designation.js';
 import leavesetupRouter from './routes/leavesetup.js';
+import leaveAnalyticsRouter from './routes/leaveAnalytics.js';
 import connectToDatabase from './db/db.js';
 import { initSalaryCron } from './controllers/salaryConfigController.js';
 import dotenv from 'dotenv';
@@ -31,8 +32,8 @@ app.use(express.static('public/uploads'));
 
 // Routes
 app.use('/api/auth', authRouter);
-app.use('/api/department', departmentRouter);
-app.use('/api/employee', employeeRouter);
+app.use('/api/departments', departmentRouter);
+app.use('/api/employees', employeeRouter);
 app.use('/api/salary', salaryRouter);
 app.use('/api/salary-config', salaryConfig);
 app.use('/api/leave', leaveRouter);
@@ -40,6 +41,7 @@ app.use('/api/leave-setup', leavesetupRouter);
 app.use('/api/setting', settingRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/designation', designationRouter);
+app.use('/api/leave/analytics', leaveAnalyticsRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {

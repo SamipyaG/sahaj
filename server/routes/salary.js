@@ -26,13 +26,15 @@ router.get(
 // Get overall salary payment status (Admin/HR only)
 router.get(
   '/paidStatus',
-  authMiddleware, getPaidStatus
+  authMiddleware,
+  getPaidStatus
 );
 
 // Get employee salary history (accessible by employee or admin/hr)
 router.get(
   '/:id',
-  authMiddleware, getEmployeeSalaries
+  authMiddleware,
+  getEmployeeSalaries
 );
 
 export default router;

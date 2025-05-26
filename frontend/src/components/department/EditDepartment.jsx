@@ -20,7 +20,7 @@ const EditDepartment = () => {
     const fetchDepartment = async () => {
       setDepLoading(true);
       try {
-        const response = await axios.get(`http://localhost:5000/api/department/${id}`, {
+        const response = await axios.get(`http://localhost:5000/api/departments/${id}`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },

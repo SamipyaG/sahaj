@@ -7,9 +7,9 @@ const addDesignation = async (req, res) => {
 
         // Validate required fields
         if (!title || !basic_salary) {
-            return res.status(400).json({ 
-                success: false, 
-                error: "Title and basic salary are required" 
+            return res.status(400).json({
+                success: false,
+                error: "Title and basic salary are required"
             });
         }
 
@@ -42,13 +42,12 @@ const getDesignations = async (req, res) => {
     }
 };
 
-
 // Get a specific designation by ID
 const getDesignationById = async (req, res) => {
     try {
         const { id } = req.params;
         const designation = await Designation.findById(id);
-        
+
         if (!designation) {
             return res.status(404).json({ success: false, error: "Designation not found" });
         }
@@ -91,7 +90,7 @@ const deleteDesignation = async (req, res) => {
     try {
         const { id } = req.params;
         const deletedDesignation = await Designation.findByIdAndDelete(id);
-        
+
         if (!deletedDesignation) {
             return res.status(404).json({ success: false, error: "Designation not found" });
         }

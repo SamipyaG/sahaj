@@ -17,7 +17,7 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 });
@@ -31,17 +31,17 @@ const populateEmployeeData = async (employee) => {
 
   // Manual population if needed
   if (!employee.department_id || typeof employee.department_id === 'string') {
-    employee.department_id = await Department.findById(employee.department_id).select('department_name') || 
+    employee.department_id = await Department.findById(employee.department_id).select('department_name') ||
       { department_name: 'N/A' };
   }
 
   if (!employee.designation_id || typeof employee.designation_id === 'string') {
-    employee.designation_id = await Designation.findById(employee.designation_id).select('title basic_salary') || 
+    employee.designation_id = await Designation.findById(employee.designation_id).select('title basic_salary') ||
       { title: 'N/A', basic_salary: 0 };
   }
 
   if (!employee.user_id || typeof employee.user_id === 'string') {
-    employee.user_id = await User.findById(employee.user_id).select('name email role profileImage') || 
+    employee.user_id = await User.findById(employee.user_id).select('name email role profileImage') ||
       { name: 'N/A', email: 'N/A', role: 'N/A', profileImage: 'default.png' };
   }
 
@@ -62,16 +62,16 @@ const populateEmployeeData = async (employee) => {
 const addEmployee = async (req, res) => {
   try {
     const requiredFields = [
-      'employee_name', 'email', 'employee_id', 
+      'employee_name', 'email', 'employee_id',
       'department_id', 'designation_id', 'password', 'role'
     ];
-    
+
     // Validate required fields
     const missingFields = requiredFields.filter(field => {
       const value = req.body[field];
       return value === undefined || value === null || value === '';
     });
-    
+
     if (missingFields.length > 0) {
       return res.status(400).json({
         success: false,
@@ -97,16 +97,16 @@ const addEmployee = async (req, res) => {
     ]);
 
     if (existingUser) {
-      return res.status(400).json({ 
-        success: false, 
-        error: "Email already exists" 
+      return res.status(400).json({
+        success: false,
+        error: "Email already exists"
       });
     }
 
     if (existingEmployee) {
-      return res.status(400).json({ 
-        success: false, 
-        error: "Employee ID already exists" 
+      return res.status(400).json({
+        success: false,
+        error: "Employee ID already exists"
       });
     }
 
@@ -145,7 +145,7 @@ const addEmployee = async (req, res) => {
 
   } catch (error) {
     console.error("Error in addEmployee:", error);
-    
+
     // Handle duplicate key error specifically
     if (error.code === 11000) {
       return res.status(400).json({
@@ -154,7 +154,7 @@ const addEmployee = async (req, res) => {
         details: "The provided employee ID already exists or is invalid"
       });
     }
-    
+
     return res.status(500).json({
       success: false,
       error: "Internal server error",
@@ -192,7 +192,7 @@ const getEmployees = async (req, res) => {
 const getEmployee = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // First check if it's a valid MongoDB ID
     if (/^[0-9a-fA-F]{24}$/.test(id)) {
       const employee = await Employee.findOne({
@@ -201,9 +201,9 @@ const getEmployee = async (req, res) => {
           { user_id: id }
         ]
       })
-      .populate('department_id', 'department_name')
-      .populate('designation_id', 'title basic_salary')
-      .populate('user_id', 'name email role profileImage');
+        .populate('department_id', 'department_name')
+        .populate('designation_id', 'title basic_salary')
+        .populate('user_id', 'name email role profileImage');
 
       if (employee) {
         const populatedEmployee = await populateEmployeeData(employee);
@@ -250,7 +250,7 @@ const updateEmployee = async (req, res) => {
 
     const allowedUpdates = {};
     const updatableFields = ['employee_name', 'marital_status', 'designation_id', 'department_id'];
-    
+
     if (updates.name) allowedUpdates.employee_name = updates.name;
     if (updates.maritalStatus) allowedUpdates.marital_status = updates.maritalStatus;
     if (updates.designation) allowedUpdates.designation_id = updates.designation;
@@ -270,9 +270,9 @@ const updateEmployee = async (req, res) => {
       allowedUpdates,
       { new: true, runValidators: true }
     )
-    .populate('department_id', 'department_name')
-    .populate('designation_id', 'title basic_salary')
-    .populate('user_id', 'name email role profileImage');
+      .populate('department_id', 'department_name')
+      .populate('designation_id', 'title basic_salary')
+      .populate('user_id', 'name email role profileImage');
 
     if (!updatedEmployee) {
       return res.status(404).json({
@@ -301,7 +301,7 @@ const updateEmployee = async (req, res) => {
 const fetchEmployeesByDepId = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const department = await Department.findById(id);
     if (!department) {
       return res.status(404).json({
@@ -359,7 +359,7 @@ const getLatestEmployeeId = async (req, res) => {
       .select('employee_id');
 
     let serialNumber = 1;
-    
+
     if (latestEmployee && latestEmployee.employee_id) {
       const parts = latestEmployee.employee_id.split('-');
       if (parts.length === 3) {
@@ -385,13 +385,50 @@ const getLatestEmployeeId = async (req, res) => {
   }
 };
 
-export { 
-  addEmployee, 
-  upload, 
-  getEmployees, 
-  getEmployee, 
-  updateEmployee, 
+// Delete an employee
+const deleteEmployee = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Find the employee by ID and delete
+    const deletedEmployee = await Employee.findByIdAndDelete(id);
+
+    if (!deletedEmployee) {
+      return res.status(404).json({
+        success: false,
+        error: "Employee not found"
+      });
+    }
+
+    // Optional: Delete the associated user and their profile image if necessary
+    // You might want to add logic here to handle related data (leaves, salaries, etc.)
+    // For simplicity, we'll just delete the employee document for now.
+    // Consider adding a flag for soft delete or a more comprehensive cleanup logic.
+
+    return res.status(200).json({
+      success: true,
+      message: "Employee deleted successfully",
+      data: deletedEmployee
+    });
+
+  } catch (error) {
+    console.error("Error deleting employee:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Server error while deleting employee",
+      details: error.message
+    });
+  }
+};
+
+export {
+  addEmployee,
+  upload,
+  getEmployees,
+  getEmployee,
+  updateEmployee,
   fetchEmployeesByDepId,
   getEmployeeCount,
-  getLatestEmployeeId
+  getLatestEmployeeId,
+  deleteEmployee
 };

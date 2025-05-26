@@ -370,13 +370,44 @@ const updateLeave = async (req, res) => {
 const getLeaveStats = async (req, res) => {
     try {
         console.log('Fetching leave statistics...');
+        const { year, departmentId, leaveTypeId } = req.query;
+        console.log('Received filters:', { year, departmentId, leaveTypeId });
 
-        // First, get all approved leaves with populated leave setup
-        const leaves = await Leave.find({ status: "Approved" })
+        let matchStage = { status: "Approved" };
+
+        // Add year filter
+        if (year) {
+            const startOfYear = new Date(year, 0, 1);
+            const endOfYear = new Date(year, 11, 31, 23, 59, 59, 999);
+            matchStage.startDate = { $gte: startOfYear, $lte: endOfYear };
+        }
+
+        // Add department filter
+        if (departmentId && departmentId !== 'all') {
+            // Need to populate employee to filter by department
+            // This will require adjusting the aggregation pipeline significantly,
+            // or fetching employees first then filtering leave based on employee IDs
+            // For simplicity, let's assume departmentId filtering will be done by first fetching employees
+            // with that departmentId and then matching their leave records.
+
+            const employeesInDepartment = await Employee.find({ department_id: departmentId }).select('_id');
+            const employeeIds = employeesInDepartment.map(emp => emp._id);
+            matchStage.employee_id = { $in: employeeIds };
+        }
+
+        // Add leave type filter
+        if (leaveTypeId && leaveTypeId !== 'all') {
+            matchStage.leave_setup_id = leaveTypeId;
+        }
+
+        console.log('Final match stage:', matchStage);
+
+        // Get approved leaves with populated leave setup, applying filters
+        const leaves = await Leave.find(matchStage)
             .populate('leave_setup_id', 'leaveType')
             .lean();
 
-        console.log('Found leaves:', leaves);
+        console.log('Found filtered leaves:', leaves);
 
         // Group leaves by leave type
         const stats = leaves.reduce((acc, leave) => {
