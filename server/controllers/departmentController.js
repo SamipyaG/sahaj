@@ -1,7 +1,21 @@
 import Department from "../models/Department.js";
 
+// Check if department ID exists
+export const checkDepartmentId = async (req, res) => {
+    try {
+        const department = await Department.findOne({ department_id: req.params.id });
+        res.json({ exists: !!department });
+    } catch (error) {
+        console.error('Error checking department ID:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error checking department ID'
+        });
+    }
+};
+
 // Get all departments
-const getDepartments = async (req, res) => {
+export const getDepartments = async (req, res) => {
     try {
         const departments = await Department.find();
         return res.status(200).json({ success: true, departments });
@@ -11,7 +25,7 @@ const getDepartments = async (req, res) => {
 };
 
 // Add a new department
-const addDepartment = async (req, res) => {
+export const addDepartment = async (req, res) => {
     try {
         const { department_id, department_name, department_description, paid_leave } = req.body;
 
@@ -46,7 +60,7 @@ const addDepartment = async (req, res) => {
 };
 
 // Get a single department by ID
-const getDepartment = async (req, res) => {
+export const getDepartment = async (req, res) => {
     try {
         const { id } = req.params;
         const department = await Department.findById(id);
@@ -62,7 +76,7 @@ const getDepartment = async (req, res) => {
 };
 
 // Update a department
-const updateDepartment = async (req, res) => {
+export const updateDepartment = async (req, res) => {
     try {
         const { id } = req.params;
         const { department_name, department_description, paid_leave } = req.body;
@@ -89,7 +103,7 @@ const updateDepartment = async (req, res) => {
 };
 
 // Delete a department
-const deleteDepartment = async (req, res) => {
+export const deleteDepartment = async (req, res) => {
     try {
         const { id } = req.params;
         const deletedDep = await Department.findByIdAndDelete(id);
@@ -103,5 +117,3 @@ const deleteDepartment = async (req, res) => {
         return res.status(500).json({ success: false, error: "Error deleting department: " + error.message });
     }
 };
-
-export { addDepartment, getDepartments, getDepartment, updateDepartment, deleteDepartment };

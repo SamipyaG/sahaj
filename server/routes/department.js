@@ -5,9 +5,9 @@ import {
   getDepartments,
   getDepartment,
   updateDepartment,
-  deleteDepartment,
+  deleteDepartment
 } from "../controllers/departmentController.js";
-import Department from "../models/Department.js"; // Import Department model
+import Department from "../models/Department.js";
 
 const router = express.Router();
 
@@ -26,7 +26,7 @@ router.put("/:id", authMiddleware, updateDepartment);
 // Delete a department by ID
 router.delete("/:id", authMiddleware, deleteDepartment);
 
-// ✅ Check if department ID is unique before adding
+// Check if department ID is unique before adding
 router.get("/check-id/:id", authMiddleware, async (req, res) => {
   try {
     const department = await Department.findOne({ department_id: req.params.id });

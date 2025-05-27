@@ -12,6 +12,7 @@ import dashboardRouter from './routes/dashboard.js';
 import designationRouter from './routes/designation.js';
 import leavesetupRouter from './routes/leavesetup.js';
 import leaveAnalyticsRouter from './routes/leaveAnalytics.js';
+import taskHandoverRoutes from './routes/taskHandover.js';
 import connectToDatabase from './db/db.js';
 import { initSalaryCron } from './controllers/salaryConfigController.js';
 import dotenv from 'dotenv';
@@ -20,62 +21,32 @@ dotenv.config();
 
 const app = express();
 
-// Enhanced security
+// Middleware
+app.use(cors());
 app.use(helmet());
-app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || true,
-  credentials: true
-}));
-
 app.use(express.json());
-app.use(express.static('public/uploads'));
 
 // Routes
 app.use('/api/auth', authRouter);
-app.use('/api/departments', departmentRouter);
-app.use('/api/employees', employeeRouter);
+app.use('/api/department', departmentRouter);
+app.use('/api/employee', employeeRouter);
 app.use('/api/salary', salaryRouter);
 app.use('/api/salary-config', salaryConfig);
 app.use('/api/leave', leaveRouter);
-app.use('/api/leave-setup', leavesetupRouter);
 app.use('/api/setting', settingRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/designation', designationRouter);
-app.use('/api/leave/analytics', leaveAnalyticsRouter);
+app.use('/api/leave-setup', leavesetupRouter);
+app.use('/api/leave-analytics', leaveAnalyticsRouter);
+app.use('/api/handovers', taskHandoverRoutes);
 
-// Health check
-app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'healthy' });
+// Connect to database
+connectToDatabase();
+
+// Initialize salary cron job
+initSalaryCron();
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
-
-// Error handling
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    error: 'Internal Server Error',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined
-  });
-});
-
-// Database connection and server startup
-const startServer = async () => {
-  try {
-    await connectToDatabase();
-    console.log('Database connected successfully');
-
-    await initSalaryCron();
-
-    app.listen(process.env.PORT, () => {
-      console.log(`Server running on port ${process.env.PORT}`);
-    });
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
-  }
-};
-
-process.on('unhandledRejection', (err) => {
-  console.error('Unhandled Rejection:', err);
-});
-
-startServer();
