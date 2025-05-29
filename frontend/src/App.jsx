@@ -29,6 +29,7 @@ import LeaveSeatupEdit from "./components/leaveSetup/edit"
 import LeaveSeatupList from "./components/leaveSetup/list"
 import SalaryConfig from "./components/salary/SalaryConfig";
 import LeaveHandover from "./components/leave/LeaveHandover";
+import EmployeeLeaveHandover from "./components/employee/EmployeeLeaveHandover";
 
 function App() {
   return (
@@ -138,7 +139,7 @@ function App() {
           <Route path="/employee-dashboard/add-leave" element={<AddLeave />}></Route>
           <Route path="/employee-dashboard/salary/:id" element={<ViewSalary />}></Route>
           <Route path="/employee-dashboard/setting" element={<Setting />}></Route>
-          <Route path="/employee-dashboard/leave-handover" element={<LeaveHandover isAdmin={false} />}></Route>
+          <Route path="/employee-dashboard/leave-handover" element={<EmployeeLeaveHandover />}></Route>
         </Route>
       </Routes>
     </BrowserRouter>
