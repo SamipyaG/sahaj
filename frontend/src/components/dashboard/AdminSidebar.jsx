@@ -4,11 +4,10 @@ import {
   FaBuilding,
   FaCalendarCheck,
   FaCogs,
-  
+  FaExchangeAlt,
   FaTachometerAlt,
   FaUsers,
   FaUserTie,
-  
   FaClipboardList,
   FaWallet,
 } from "react-icons/fa";
@@ -28,8 +27,7 @@ const AdminSidebar = () => {
         <NavLink
           to="/admin-dashboard"
           className={({ isActive }) =>
-            `${
-              isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
+            `${isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
             } flex items-center space-x-4 block py-3 px-4 rounded-lg transition-all duration-300`
           }
           end
@@ -41,8 +39,7 @@ const AdminSidebar = () => {
         <NavLink
           to="/admin-dashboard/employees"
           className={({ isActive }) =>
-            `${
-              isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
+            `${isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
             } flex items-center space-x-4 block py-3 px-4 rounded-lg mt-2 transition-all duration-300`
           }
         >
@@ -53,8 +50,7 @@ const AdminSidebar = () => {
         <NavLink
           to="/admin-dashboard/departments"
           className={({ isActive }) =>
-            `${
-              isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
+            `${isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
             } flex items-center space-x-4 block py-3 px-4 rounded-lg mt-2 transition-all duration-300`
           }
         >
@@ -65,8 +61,7 @@ const AdminSidebar = () => {
         <NavLink
           to="/admin-dashboard/leaves"
           className={({ isActive }) =>
-            `${
-              isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
+            `${isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
             } flex items-center space-x-4 block py-3 px-4 rounded-lg mt-2 transition-all duration-300`
           }
         >
@@ -74,13 +69,21 @@ const AdminSidebar = () => {
           <span className="font-medium">Leave</span>
         </NavLink>
 
-        
+        <NavLink
+          to="/admin-dashboard/leave-handover"
+          className={({ isActive }) =>
+            `${isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
+            } flex items-center space-x-4 block py-3 px-4 rounded-lg mt-2 transition-all duration-300`
+          }
+        >
+          <FaExchangeAlt className="text-xl" />
+          <span className="font-medium">Leave Handover</span>
+        </NavLink>
 
         <NavLink
           to="/admin-dashboard/salary/automatic"
           className={({ isActive }) =>
-            `${
-              isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
+            `${isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
             } flex items-center space-x-4 block py-3 px-4 rounded-lg mt-2 transition-all duration-300`
           }
         >
@@ -90,8 +93,7 @@ const AdminSidebar = () => {
         <NavLink
           to="/admin-dashboard/salary/salaryconfig"
           className={({ isActive }) =>
-            `${
-              isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
+            `${isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
             } flex items-center space-x-4 block py-3 px-4 rounded-lg mt-2 transition-all duration-300`
           }
         >
@@ -102,8 +104,7 @@ const AdminSidebar = () => {
         <NavLink
           to="/admin-dashboard/designation"
           className={({ isActive }) =>
-            `${
-              isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
+            `${isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
             } flex items-center space-x-4 block py-3 px-4 rounded-lg mt-2 transition-all duration-300`
           }
         >
@@ -114,8 +115,7 @@ const AdminSidebar = () => {
         <NavLink
           to="/admin-dashboard/leave-Setup"
           className={({ isActive }) =>
-            `${
-              isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
+            `${isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
             } flex items-center space-x-4 block py-3 px-4 rounded-lg mt-2 transition-all duration-300`
           }
         >
@@ -126,8 +126,7 @@ const AdminSidebar = () => {
         <NavLink
           to="/admin-dashboard/setting"
           className={({ isActive }) =>
-            `${
-              isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
+            `${isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
             } flex items-center space-x-4 block py-3 px-4 rounded-lg mt-2 transition-all duration-300`
           }
         >

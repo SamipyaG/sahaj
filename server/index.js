@@ -11,6 +11,7 @@ import settingRouter from './routes/setting.js';
 import dashboardRouter from './routes/dashboard.js';
 import designationRouter from './routes/designation.js';
 import leavesetupRouter from './routes/leavesetup.js';
+import leaveHandoverRoutes from './routes/leaveHandover.js';
 import connectToDatabase from './db/db.js';
 import { initSalaryCron } from './controllers/salaryConfigController.js';
 import dotenv from 'dotenv';
@@ -40,6 +41,7 @@ app.use('/api/leave-setup', leavesetupRouter);
 app.use('/api/setting', settingRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/designation', designationRouter);
+app.use('/api/leave-handover', leaveHandoverRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

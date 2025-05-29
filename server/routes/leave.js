@@ -16,6 +16,9 @@ import {
 
 const router = express.Router();
 
+// Route to add a new leave request
+router.post('/add', authMiddleware, addLeave);
+
 // Route to get leave statistics (must be before the /:id/:role route)
 router.get('/stats', authMiddleware, getLeaveStats);
 

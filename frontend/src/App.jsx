@@ -3,7 +3,7 @@ import Login from "./pages/Login";
 import AdminDashboard from "./pages/AdminDashboard";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
 import PrivateRoutes from "./utils/PrivateRoutes";
-import RoleBaseRoutes from "./utils/RoleBaseRoutes"; 
+import RoleBaseRoutes from "./utils/RoleBaseRoutes";
 import AdminSummary from "./components/dashboard/AdminSummary";
 import DepartmentList from "./components/department/DepartmentList";
 import AddDepartment from "./components/department/AddDepartment";
@@ -28,6 +28,7 @@ import LeaveSeatupAdd from "./components/leaveSetup/add"
 import LeaveSeatupEdit from "./components/leaveSetup/edit"
 import LeaveSeatupList from "./components/leaveSetup/list"
 import SalaryConfig from "./components/salary/SalaryConfig";
+import LeaveHandover from "./components/leave/LeaveHandover";
 
 function App() {
   return (
@@ -75,49 +76,48 @@ function App() {
             element={<ViewSalary />}
           ></Route>
 
-          
-           <Route
+          <Route
             path="/admin-dashboard/salary/automatic"
             element={<AutomaticSalary />}
           ></Route>
-          
-           <Route
+
+          <Route
             path="/admin-dashboard/salary/view"
             element={<SalaryView />}
           ></Route>
-           <Route
+          <Route
             path="/admin-dashboard/salary/salaryconfig"
             element={<SalaryConfig />}
           ></Route>
           <Route
             path="/admin-dashboard/designation/add"
-            element={< DesignationAdd/>}
+            element={< DesignationAdd />}
           ></Route>
           <Route
             path="/admin-dashboard/designation"
-            element={< DesignationList/>}
+            element={< DesignationList />}
           ></Route>
           <Route
             path="/admin-dashboard/designation/edit/:id"
-            element={< DesignationEdit/>}
+            element={< DesignationEdit />}
           ></Route>
-           <Route
+          <Route
             path="/admin-dashboard/leave-Setup/add"
-            element={< LeaveSeatupAdd/>}
+            element={< LeaveSeatupAdd />}
           ></Route>
-           <Route
+          <Route
             path="/admin-dashboard/leave-Setup/edit/:id"
-            element={< LeaveSeatupEdit/>}
+            element={< LeaveSeatupEdit />}
           ></Route>
-           <Route
+          <Route
             path="/admin-dashboard/leave-Setup"
-            element={< LeaveSeatupList/>}
+            element={< LeaveSeatupList />}
           ></Route>
-          
-          
+
           <Route path="/admin-dashboard/leaves" element={<Table />}></Route>
           <Route path="/admin-dashboard/leaves/:id" element={<Detail />}></Route>
           <Route path="/admin-dashboard/employees/leaves/:id" element={<LeaveList />}></Route>
+          <Route path="/admin-dashboard/leave-handover" element={<LeaveHandover isAdmin={true} />}></Route>
 
           <Route path="/admin-dashboard/setting" element={<Setting />}></Route>
         </Route>
@@ -138,7 +138,7 @@ function App() {
           <Route path="/employee-dashboard/add-leave" element={<AddLeave />}></Route>
           <Route path="/employee-dashboard/salary/:id" element={<ViewSalary />}></Route>
           <Route path="/employee-dashboard/setting" element={<Setting />}></Route>
-
+          <Route path="/employee-dashboard/leave-handover" element={<LeaveHandover isAdmin={false} />}></Route>
         </Route>
       </Routes>
     </BrowserRouter>

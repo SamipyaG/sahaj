@@ -11,7 +11,7 @@ import {
 import { useAuth } from "../../context/authContext";
 
 const Sidebar = () => {
-    const {user} = useAuth()
+  const { user } = useAuth()
   return (
     <div className="bg-gray-800 text-white h-screen fixed left-0 top-0 bottom-0 space-y-2 w-64 shadow-xl">
       {/* Header */}
@@ -26,8 +26,7 @@ const Sidebar = () => {
         <NavLink
           to="/employee-dashboard"
           className={({ isActive }) =>
-            `${
-              isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
+            `${isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
             } flex items-center space-x-4 block py-3 px-4 rounded-lg transition-all duration-300`
           }
           end
@@ -39,8 +38,7 @@ const Sidebar = () => {
         <NavLink
           to={`/employee-dashboard/profile/${user._id}`}
           className={({ isActive }) =>
-            `${
-              isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
+            `${isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
             } flex items-center space-x-4 block py-3 px-4 rounded-lg mt-2 transition-all duration-300`
           }
         >
@@ -51,8 +49,7 @@ const Sidebar = () => {
         <NavLink
           to={`/employee-dashboard/leaves/${user._id}`}
           className={({ isActive }) =>
-            `${
-              isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
+            `${isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
             } flex items-center space-x-4 block py-3 px-4 rounded-lg mt-2 transition-all duration-300`
           }
         >
@@ -63,8 +60,7 @@ const Sidebar = () => {
         <NavLink
           to={`/employee-dashboard/salary/${user._id}`}
           className={({ isActive }) =>
-            `${
-              isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
+            `${isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
             } flex items-center space-x-4 block py-3 px-4 rounded-lg mt-2 transition-all duration-300`
           }
         >
@@ -75,8 +71,7 @@ const Sidebar = () => {
         <NavLink
           to="/employee-dashboard/setting"
           className={({ isActive }) =>
-            `${
-              isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
+            `${isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
             } flex items-center space-x-4 block py-3 px-4 rounded-lg mt-2 transition-all duration-300`
           }
         >
