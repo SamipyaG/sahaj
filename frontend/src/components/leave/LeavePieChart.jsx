@@ -21,6 +21,7 @@ const LeavePieChart = ({ isAdmin = false }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [stats, setStats] = useState(null);
+  const [filterType, setFilterType] = useState('leaveType'); // 'leaveType', 'department', 'designation'
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -28,12 +29,21 @@ const LeavePieChart = ({ isAdmin = false }) => {
         setLoading(true);
         setError(null);
 
-        const endpoint = isAdmin
-          ? 'http://localhost:5000/api/leave/stats'
-          : `http://localhost:5000/api/leave/stats/employee/${user._id}`;
-
-        console.log('Fetching stats from:', endpoint);
-        console.log('Auth token:', localStorage.getItem('token'));
+        let endpoint;
+        if (!isAdmin) {
+          endpoint = `http://localhost:5000/api/leave/stats/employee/${user._id}`;
+        } else {
+          switch (filterType) {
+            case 'department':
+              endpoint = 'http://localhost:5000/api/leave/stats/department';
+              break;
+            case 'designation':
+              endpoint = 'http://localhost:5000/api/leave/stats/designation';
+              break;
+            default:
+              endpoint = 'http://localhost:5000/api/leave/stats';
+          }
+        }
 
         const response = await axios.get(endpoint, {
           headers: {
@@ -41,25 +51,17 @@ const LeavePieChart = ({ isAdmin = false }) => {
           }
         });
 
-        console.log('Stats response:', response.data);
         if (response.data.success) {
           if (!Array.isArray(response.data.stats)) {
-            console.error('Stats is not an array:', response.data.stats);
             setError('Invalid data format received from server');
             return;
           }
           setStats(response.data.stats);
         } else {
-          console.error('Server returned error:', response.data.error);
           setError(response.data.error || 'Failed to fetch leave statistics');
         }
       } catch (err) {
         console.error('Error fetching leave statistics:', err);
-        console.error('Error details:', {
-          message: err.message,
-          response: err.response?.data,
-          status: err.response?.status
-        });
         setError(err.response?.data?.error || 'Failed to fetch leave statistics');
       } finally {
         setLoading(false);
@@ -69,7 +71,7 @@ const LeavePieChart = ({ isAdmin = false }) => {
     if (user?._id) {
       fetchStats();
     }
-  }, [user, isAdmin]);
+  }, [user, isAdmin, filterType]);
 
   if (loading) {
     return (
@@ -96,13 +98,31 @@ const LeavePieChart = ({ isAdmin = false }) => {
     );
   }
 
-  console.log('Rendering chart with stats:', stats);
+  const getChartData = () => {
+    let labels, data;
+    switch (filterType) {
+      case 'department':
+        labels = stats.map(stat => stat.department);
+        data = stats.map(stat => stat.count);
+        break;
+      case 'designation':
+        labels = stats.map(stat => stat.designation);
+        data = stats.map(stat => stat.count);
+        break;
+      default:
+        labels = stats.map(stat => stat.leaveType);
+        data = stats.map(stat => stat.count);
+    }
+    return { labels, data };
+  };
+
+  const { labels, data } = getChartData();
 
   const chartData = {
-    labels: stats.map(stat => stat.leaveType),
+    labels,
     datasets: [
       {
-        data: stats.map(stat => stat.count),
+        data,
         backgroundColor: [
           '#FF6384',
           '#36A2EB',
@@ -130,7 +150,9 @@ const LeavePieChart = ({ isAdmin = false }) => {
       },
       title: {
         display: true,
-        text: isAdmin ? 'Overall Leave Distribution' : 'Your Leave Distribution',
+        text: isAdmin
+          ? `Leave Distribution by ${filterType === 'leaveType' ? 'Leave Type' : filterType === 'department' ? 'Department' : 'Designation'}`
+          : 'Your Leave Distribution',
         font: {
           size: 16,
           weight: 'bold'
@@ -141,6 +163,22 @@ const LeavePieChart = ({ isAdmin = false }) => {
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
+      {isAdmin && (
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Filter By
+          </label>
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm rounded-md"
+          >
+            <option value="leaveType">Leave Type</option>
+            <option value="department">Department</option>
+            <option value="designation">Designation</option>
+          </select>
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="h-[400px] flex items-center justify-center">
           <Pie data={chartData} options={chartOptions} />
@@ -149,7 +187,13 @@ const LeavePieChart = ({ isAdmin = false }) => {
           <h3 className="text-xl font-semibold mb-4">Leave Summary</h3>
           {stats.map((stat, index) => (
             <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded">
-              <span className="font-medium">{stat.leaveType}</span>
+              <span className="font-medium">
+                {filterType === 'department'
+                  ? stat.department
+                  : filterType === 'designation'
+                    ? stat.designation
+                    : stat.leaveType}
+              </span>
               <span className="text-teal-600 font-bold">{stat.count} leaves</span>
             </div>
           ))}

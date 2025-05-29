@@ -9,7 +9,9 @@ import {
   getLeaveHistory,
   getLeaveStats,
   getEmployeeLeaveStats,
-  getOverallEmployeeLeaveStats
+  getOverallEmployeeLeaveStats,
+  getDepartmentLeaveStats,
+  getDesignationLeaveStats
 } from '../controllers/leaveController.js';
 
 const router = express.Router();
@@ -22,6 +24,12 @@ router.get('/stats/employee/:userId', authMiddleware, getEmployeeLeaveStats);
 
 // Route to get overall employee leave statistics
 router.get('/stats/overall', authMiddleware, getOverallEmployeeLeaveStats);
+
+// Route to get department-wise leave statistics
+router.get('/stats/department', authMiddleware, getDepartmentLeaveStats);
+
+// Route to get designation-wise leave statistics
+router.get('/stats/designation', authMiddleware, getDesignationLeaveStats);
 
 // Route to get leave history for balance calculation
 router.get('/history/:userId/:leaveSetupId', authMiddleware, getLeaveHistory);

@@ -566,6 +566,144 @@ const getOverallEmployeeLeaveStats = async (req, res) => {
     }
 };
 
+// Get department-wise leave statistics
+const getDepartmentLeaveStats = async (req, res) => {
+    try {
+        const stats = await Leave.aggregate([
+            {
+                $match: {
+                    status: "Approved"
+                }
+            },
+            {
+                $lookup: {
+                    from: 'employees',
+                    localField: 'employee_id',
+                    foreignField: '_id',
+                    as: 'employee'
+                }
+            },
+            {
+                $unwind: {
+                    path: '$employee',
+                    preserveNullAndEmptyArrays: false
+                }
+            },
+            {
+                $lookup: {
+                    from: 'departments',
+                    localField: 'employee.department_id',
+                    foreignField: '_id',
+                    as: 'department'
+                }
+            },
+            {
+                $unwind: {
+                    path: '$department',
+                    preserveNullAndEmptyArrays: false
+                }
+            },
+            {
+                $group: {
+                    _id: '$department.department_name',
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    department: '$_id',
+                    count: 1
+                }
+            },
+            {
+                $sort: { count: -1 }
+            }
+        ]);
+
+        return res.status(200).json({
+            success: true,
+            stats
+        });
+
+    } catch (error) {
+        console.error("Department leave stats error:", error);
+        return res.status(500).json({
+            success: false,
+            error: "Server error while fetching department leave statistics"
+        });
+    }
+};
+
+// Get designation-wise leave statistics
+const getDesignationLeaveStats = async (req, res) => {
+    try {
+        const stats = await Leave.aggregate([
+            {
+                $match: {
+                    status: "Approved"
+                }
+            },
+            {
+                $lookup: {
+                    from: 'employees',
+                    localField: 'employee_id',
+                    foreignField: '_id',
+                    as: 'employee'
+                }
+            },
+            {
+                $unwind: {
+                    path: '$employee',
+                    preserveNullAndEmptyArrays: false
+                }
+            },
+            {
+                $lookup: {
+                    from: 'designations',
+                    localField: 'employee.designation_id',
+                    foreignField: '_id',
+                    as: 'designation'
+                }
+            },
+            {
+                $unwind: {
+                    path: '$designation',
+                    preserveNullAndEmptyArrays: false
+                }
+            },
+            {
+                $group: {
+                    _id: '$designation.designation_name',
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    designation: '$_id',
+                    count: 1
+                }
+            },
+            {
+                $sort: { count: -1 }
+            }
+        ]);
+
+        return res.status(200).json({
+            success: true,
+            stats
+        });
+
+    } catch (error) {
+        console.error("Designation leave stats error:", error);
+        return res.status(500).json({
+            success: false,
+            error: "Server error while fetching designation leave statistics"
+        });
+    }
+};
+
 export {
     addLeave,
     getLeave,
@@ -575,5 +713,7 @@ export {
     getLeaveHistory,
     getLeaveStats,
     getEmployeeLeaveStats,
-    getOverallEmployeeLeaveStats
+    getOverallEmployeeLeaveStats,
+    getDepartmentLeaveStats,
+    getDesignationLeaveStats
 };
