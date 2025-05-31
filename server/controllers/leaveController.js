@@ -39,6 +39,35 @@ const addLeave = async (req, res) => {
             });
         }
 
+        // Check for any active or pending leaves
+        const currentDate = new Date();
+        const activeLeave = await Leave.findOne({
+            employee_id: employee._id,
+            $or: [
+                { status: "Approved" },
+                { status: "Pending" }
+            ],
+            $or: [
+                // Check if current date falls between start and end date
+                {
+                    startDate: { $lte: currentDate },
+                    endDate: { $gte: currentDate }
+                },
+                // Check if new leave overlaps with existing leave
+                {
+                    startDate: { $lte: new Date(endDate) },
+                    endDate: { $gte: new Date(startDate) }
+                }
+            ]
+        });
+
+        if (activeLeave) {
+            return res.status(400).json({
+                success: false,
+                error: "You already have an active or pending leave during this period. Cannot apply for another leave."
+            });
+        }
+
         const leaveSetup = await LeaveSetup.findById(leave_setup_id);
         if (!leaveSetup) {
             return res.status(404).json({

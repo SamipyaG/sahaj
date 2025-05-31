@@ -79,6 +79,26 @@ const addEmployee = async (req, res) => {
       });
     }
 
+    // Validate age if date_of_birth is provided
+    if (req.body.date_of_birth) {
+      const dob = new Date(req.body.date_of_birth);
+      const today = new Date();
+      const age = today.getFullYear() - dob.getFullYear();
+      const monthDiff = today.getMonth() - dob.getMonth();
+
+      // Adjust age if birthday hasn't occurred this year
+      const adjustedAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())
+        ? age - 1
+        : age;
+
+      if (adjustedAge < 21) {
+        return res.status(400).json({
+          success: false,
+          error: "Employee must be at least 21 years old"
+        });
+      }
+    }
+
     // Trim and validate employee_id
     const employee_id = req.body.employee_id ? req.body.employee_id.toString().trim() : null;
     if (!employee_id) {
@@ -254,13 +274,35 @@ const updateEmployee = async (req, res) => {
     const { id } = req.params;
     const updates = req.body;
 
+    // Validate age if date_of_birth is being updated
+    if (updates.date_of_birth) {
+      const dob = new Date(updates.date_of_birth);
+      const today = new Date();
+      const age = today.getFullYear() - dob.getFullYear();
+      const monthDiff = today.getMonth() - dob.getMonth();
+
+      // Adjust age if birthday hasn't occurred this year
+      const adjustedAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())
+        ? age - 1
+        : age;
+
+      if (adjustedAge < 21) {
+        return res.status(400).json({
+          success: false,
+          error: "Employee must be at least 21 years old"
+        });
+      }
+    }
+
     const allowedUpdates = {};
-    const updatableFields = ['employee_name', 'marital_status', 'designation_id', 'department_id'];
+    const updatableFields = ['employee_name', 'marital_status', 'designation_id', 'department_id', 'date_of_birth', 'gender'];
 
     if (updates.name) allowedUpdates.employee_name = updates.name;
     if (updates.maritalStatus) allowedUpdates.marital_status = updates.maritalStatus;
     if (updates.designation) allowedUpdates.designation_id = updates.designation;
     if (updates.department) allowedUpdates.department_id = updates.department;
+    if (updates.date_of_birth) allowedUpdates.date_of_birth = updates.date_of_birth;
+    if (updates.gender) allowedUpdates.gender = updates.gender;
 
     if (allowedUpdates.employee_name) {
       const employee = await Employee.findById(id);

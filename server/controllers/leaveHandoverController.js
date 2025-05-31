@@ -38,7 +38,7 @@ const createLeaveHandover = async (req, res) => {
     const leave = await Leave.findOne({
       _id: leave_id,
       employee_id: fromEmployee._id
-    });
+    }).populate('leave_setup_id', 'leaveType maxDays');
 
     if (!leave) {
       return res.status(404).json({
@@ -70,15 +70,43 @@ const createLeaveHandover = async (req, res) => {
       from_employee_id: fromEmployee._id,
       to_employee_id,
       handover_notes,
-      is_admin_initiated: false
+      is_admin_initiated: false,
+      status: 'Pending'
     });
 
     await newHandover.save();
 
+    // Populate the handover data before sending response
+    const populatedHandover = await LeaveHandover.findById(newHandover._id)
+      .populate({
+        path: 'leave_id',
+        select: 'startDate endDate leaveType status',
+        populate: {
+          path: 'leave_setup_id',
+          select: 'leaveType maxDays'
+        }
+      })
+      .populate({
+        path: 'from_employee_id',
+        select: 'employee_name',
+        populate: {
+          path: 'user_id',
+          select: 'name email'
+        }
+      })
+      .populate({
+        path: 'to_employee_id',
+        select: 'employee_name',
+        populate: {
+          path: 'user_id',
+          select: 'name email'
+        }
+      });
+
     return res.status(201).json({
       success: true,
       message: "Leave handover request created successfully",
-      handover: newHandover
+      handover: populatedHandover
     });
 
   } catch (error) {
@@ -159,69 +187,81 @@ const updateHandoverStatus = async (req, res) => {
     const { status } = req.body;
     const user_id = req.user._id;
 
-    console.log('[updateHandoverStatus] Request params:', { id, status, user_id }); // Debug log
+    if (!["Accepted", "Rejected"].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid status. Must be either 'Accepted' or 'Rejected'"
+      });
+    }
 
-    // Find the employee making the request
     const employee = await Employee.findOne({ user_id });
     if (!employee) {
-      console.log('[updateHandoverStatus] No employee found for user_id:', user_id); // Debug log
       return res.status(404).json({
         success: false,
         error: "Employee not found"
       });
     }
 
-    console.log('[updateHandoverStatus] Found employee:', employee._id); // Debug log
-
-    // Find the handover
     const handover = await LeaveHandover.findById(id);
     if (!handover) {
-      console.log('[updateHandoverStatus] No handover found for id:', id); // Debug log
       return res.status(404).json({
         success: false,
         error: "Handover request not found"
       });
     }
 
-    console.log('[updateHandoverStatus] Found handover:', {
-      id: handover._id,
-      to_employee_id: handover.to_employee_id,
-      current_employee_id: employee._id
-    }); // Debug log
-
-    // Verify the employee is the recipient
     if (handover.to_employee_id.toString() !== employee._id.toString()) {
-      console.log('[updateHandoverStatus] Unauthorized: Employee is not the recipient'); // Debug log
       return res.status(403).json({
         success: false,
-        error: "Unauthorized to update this handover"
+        error: "Not authorized to update this handover"
       });
     }
 
-    // Check if handover is admin-initiated
     if (handover.is_admin_initiated) {
-      console.log('[updateHandoverStatus] Cannot modify admin-initiated handover'); // Debug log
-      return res.status(400).json({
+      return res.status(403).json({
         success: false,
-        error: "Cannot modify admin-initiated handover"
+        error: "Cannot update admin-initiated handover"
       });
     }
 
-    // Update the status
     handover.status = status;
-    handover.updated_at = new Date();
     await handover.save();
 
-    console.log('[updateHandoverStatus] Successfully updated handover status'); // Debug log
+    // Populate the updated handover data
+    const updatedHandover = await LeaveHandover.findById(handover._id)
+      .populate({
+        path: 'leave_id',
+        select: 'startDate endDate leaveType status',
+        populate: {
+          path: 'leave_setup_id',
+          select: 'leaveType maxDays'
+        }
+      })
+      .populate({
+        path: 'from_employee_id',
+        select: 'employee_name',
+        populate: {
+          path: 'user_id',
+          select: 'name email'
+        }
+      })
+      .populate({
+        path: 'to_employee_id',
+        select: 'employee_name',
+        populate: {
+          path: 'user_id',
+          select: 'name email'
+        }
+      });
 
     return res.status(200).json({
       success: true,
-      message: "Handover status updated successfully",
-      handover
+      message: `Handover ${status.toLowerCase()} successfully`,
+      handover: updatedHandover
     });
 
   } catch (error) {
-    console.error('[updateHandoverStatus] Error:', error); // Debug log
+    console.error("Handover status update error:", error);
     return res.status(500).json({
       success: false,
       error: "Server error while updating handover status"
@@ -233,14 +273,11 @@ const updateHandoverStatus = async (req, res) => {
 const getHandoverHistory = async (req, res) => {
   try {
     const user_id = req.user._id;
-    console.log('[getHandoverHistory] user_id from token:', user_id); // Debug log
-
     const employee = await Employee.findOne({ user_id });
     if (!employee) {
-      console.log('[getHandoverHistory] No employee found for user_id:', user_id); // Debug log
       return res.status(404).json({
         success: false,
-        error: `Employee not found for user_id: ${user_id}`
+        error: "Employee not found"
       });
     }
 
@@ -250,9 +287,17 @@ const getHandoverHistory = async (req, res) => {
         { to_employee_id: employee._id }
       ]
     })
-      .populate('leave_id', 'startDate endDate leaveType')
+      .populate({
+        path: 'leave_id',
+        select: 'startDate endDate leaveType status',
+        populate: {
+          path: 'leave_setup_id',
+          select: 'leaveType maxDays'
+        }
+      })
       .populate({
         path: 'from_employee_id',
+        select: 'employee_name',
         populate: {
           path: 'user_id',
           select: 'name email'
@@ -260,14 +305,13 @@ const getHandoverHistory = async (req, res) => {
       })
       .populate({
         path: 'to_employee_id',
+        select: 'employee_name',
         populate: {
           path: 'user_id',
           select: 'name email'
         }
       })
-      .sort({ created_at: -1 });
-
-    console.log(`[getHandoverHistory] Found ${handovers.length} handovers for employee_id:`, employee._id); // Debug log
+      .sort({ createdAt: -1 });
 
     return res.status(200).json({
       success: true,
@@ -275,11 +319,10 @@ const getHandoverHistory = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[getHandoverHistory] Handover history fetch error:', error);
+    console.error("Handover history error:", error);
     return res.status(500).json({
       success: false,
-      error: 'Server error while fetching handover history',
-      details: error.message
+      error: "Server error while fetching handover history"
     });
   }
 };
