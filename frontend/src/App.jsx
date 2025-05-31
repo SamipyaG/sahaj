@@ -31,12 +31,21 @@ import SalaryConfig from "./components/salary/SalaryConfig";
 import LeaveHandover from "./components/leave/LeaveHandover";
 import EmployeeLeaveHandover from "./components/employee/EmployeeLeaveHandover";
 
+// Import password reset components
+import ForgotPassword from './pages/ForgotPassword.jsx'; // Fixed extension
+import ResetPassword from './pages/ResetPassword.jsx'; // Fixed extension
+
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public Routes */}
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:userId/:code" element={<ResetPassword />} />
         <Route path="/" element={<Navigate to="/admin-dashboard" />}></Route>
         <Route path="/login" element={<Login />}></Route>
+
+        {/* Admin Dashboard Routes (Protected and Role-based)*/}
         <Route
           path="/admin-dashboard"
           element={
@@ -62,6 +71,7 @@ function App() {
             element={<EditDepartment />}
           ></Route>
 
+          {/* Employee Management Routes (Admin) */}
           <Route path="/admin-dashboard/employees" element={<List />}></Route>
           <Route path="/admin-dashboard/add-employee" element={<Add />}></Route>
           <Route
@@ -77,6 +87,7 @@ function App() {
             element={<ViewSalary />}
           ></Route>
 
+          {/* Salary Management Routes (Admin) */}
           <Route
             path="/admin-dashboard/salary/automatic"
             element={<AutomaticSalary />}
@@ -90,6 +101,8 @@ function App() {
             path="/admin-dashboard/salary/salaryconfig"
             element={<SalaryConfig />}
           ></Route>
+
+          {/* Designation Management Routes (Admin) */}
           <Route
             path="/admin-dashboard/designation/add"
             element={< DesignationAdd />}
@@ -102,6 +115,8 @@ function App() {
             path="/admin-dashboard/designation/edit/:id"
             element={< DesignationEdit />}
           ></Route>
+
+          {/* Leave Setup Management Routes (Admin)*/}
           <Route
             path="/admin-dashboard/leave-Setup/add"
             element={< LeaveSeatupAdd />}
@@ -115,13 +130,21 @@ function App() {
             element={< LeaveSeatupList />}
           ></Route>
 
+          {/* Leave Management Routes (Admin)*/}
           <Route path="/admin-dashboard/leaves" element={<Table />}></Route>
           <Route path="/admin-dashboard/leaves/:id" element={<Detail />}></Route>
           <Route path="/admin-dashboard/employees/leaves/:id" element={<LeaveList />}></Route>
-          <Route path="/admin-dashboard/leave-handover" element={<LeaveHandover isAdmin={true} />}></Route>
+
+          {/* Leave Handover Management Routes (Admin)*/}
+          <Route
+            path="/admin-dashboard/leave-handover"
+            element={< LeaveHandover isAdmin={true} />}
+          ></Route>
 
           <Route path="/admin-dashboard/setting" element={<Setting />}></Route>
         </Route>
+
+        {/* Employee Dashboard Routes (Protected and Role-based) */}
         <Route
           path="/employee-dashboard"
           element={
@@ -141,6 +164,11 @@ function App() {
           <Route path="/employee-dashboard/setting" element={<Setting />}></Route>
           <Route path="/employee-dashboard/leave-handover" element={<EmployeeLeaveHandover />}></Route>
         </Route>
+
+        {/* Catch-all or Unauthorized Route */}
+        {/* Add an unauthorized page component if you like */}
+        <Route path="*" element={<Navigate to="/login" />}></Route>
+
       </Routes>
     </BrowserRouter>
   );

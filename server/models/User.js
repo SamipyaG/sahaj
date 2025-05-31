@@ -11,13 +11,21 @@ const userSchema = new mongoose.Schema({
         unique: true
     },
     password: { type: String, required: true },
-    role: { type: String, enum: ["admin", "employee"], required: true },
+    role: { type: String, enum: ["admin", "employee"], default: "employee" },
     profileImage: { type: String },
     resetPasswordToken: String,
     resetPasswordExpire: Date,
+    resetCode: {
+        type: String,
+        default: null
+    },
+    resetCodeExpiry: {
+        type: Date,
+        default: null
+    },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
-})
+}, { timestamps: true });
 
 const User = mongoose.model("User", userSchema)
 export default User
