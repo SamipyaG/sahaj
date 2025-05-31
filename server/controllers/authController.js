@@ -1,6 +1,8 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import bcrypt from "bcrypt";
+import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 
 export const login = async (req, res) => {
   try {
@@ -50,6 +52,40 @@ export const verify = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { newPassword } = req.body;
+
+    if (!newPassword) {
+      return res.status(400).json({ success: false, error: "New password is required" });
+    }
+
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpire: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ success: false, error: "Invalid or expired reset token" });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+
+    await user.save();
+
+    res.status(200).json({ success: true, message: "Password reset successfully" });
+
+  } catch (error) {
+    console.error("Reset password error:", error);
+    res.status(500).json({ success: false, error: "Server error while resetting password." });
   }
 };
 

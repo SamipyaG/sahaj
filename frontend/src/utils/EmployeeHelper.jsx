@@ -99,6 +99,33 @@ export const getEmployees = async (id) => {
   }
   return [];
 };
+const handleDelete = async (id) => {
+  const confirm = window.confirm("Are you sure the employee have left the company ?");
+  if (confirm) {
+    try {
+      const response = await axios.delete(
+        `http://localhost:5000/api/employee/${id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      if (response.data.success) {
+        console.log(response.data)
+        alert('Employee deleted successfully ')
+        window.location.reload();
+
+      }
+    } catch (error) {
+      if (error.response && !error.response.data.success) {
+        alert(error.response.data.error);
+      } else {
+        alert("An error occurred while deleting the employee ");
+      }
+    }
+  }
+};
 
 export const EmployeeButtons = ({ Id }) => {
   const navigate = useNavigate();
@@ -126,10 +153,16 @@ export const EmployeeButtons = ({ Id }) => {
         Salary
       </button>
       <button
-        className="px-3 py-1 bg-red-600 text-white"
+        className="px-3 py-1 bg-orange-600 text-white"
         onClick={() => navigate(`/admin-dashboard/employees/leaves/${Id}`)}
       >
         Leave
+      </button>
+      <button
+        className="px-3 py-1 bg-red-600 text-white"
+        onClick={() => handleDelete(Id)}
+      >
+        Delete
       </button>
     </div>
   );

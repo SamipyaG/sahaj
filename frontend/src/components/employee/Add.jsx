@@ -47,7 +47,7 @@ const AddEmployee = () => {
   const fetchLatestEmployeeId = async () => {
     try {
       const response = await axios.get(
-        'http://localhost:5000/api/employee/latest-id',
+        'http://localhost:5000/api/employee/latest/id',
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -61,17 +61,17 @@ const AddEmployee = () => {
     }
   };
 
-  // Generate employee ID when department or designation changes
+  // Generate employee ID when department, designation, or serialNumber changes
   useEffect(() => {
-    if (formData.department_id && formData.designation_id) {
+    if (formData.department_id && formData.designation_id && serialNumber) {
       const department = departments.find(d => d._id === formData.department_id);
       const designation = designations.find(d => d._id === formData.designation_id);
-      
+
       if (department && designation) {
         const deptPrefix = department.department_name.substring(0, 2).toUpperCase();
         const desigPrefix = designation.title.substring(0, 2).toUpperCase();
         const paddedSerial = serialNumber.toString().padStart(4, '0');
-        
+
         const generatedId = `${deptPrefix}-${desigPrefix}-${paddedSerial}`;
         setFormData(prev => ({ ...prev, employee_id: generatedId }));
       }
@@ -93,14 +93,18 @@ const AddEmployee = () => {
 
     const formDataObj = new FormData();
     Object.entries(formData).forEach(([key, value]) => {
-      if (value !== null && value !== '') {
+      if (key === 'image') {
+        if (value) {
+          formDataObj.append(key, value);
+        }
+      } else if (value !== null && value !== '') {
         formDataObj.append(key, value);
       }
     });
 
     try {
       const response = await axios.post(
-        'http://localhost:5000/api/employee/add',
+        'http://localhost:5000/api/employees',
         formDataObj,
         {
           headers: {
@@ -113,20 +117,24 @@ const AddEmployee = () => {
       if (response.data.success) {
         alert('Employee added successfully!');
         navigate('/admin-dashboard/employees');
+      } else {
+        setError(response.data.error || 'Failed to add employee');
       }
     } catch (err) {
       console.error('Error adding employee:', err);
-      
+
       if (err.response) {
         if (err.response.data.details) {
-          setError(err.response.data.details.join('\n'));
+          setError(Array.isArray(err.response.data.details) ? err.response.data.details.join('\n') : err.response.data.details);
         } else if (err.response.data.error) {
           setError(err.response.data.error);
         } else {
-          setError('Failed to add employee');
+          setError(`Request failed with status code ${err.response.status}`);
         }
+      } else if (err.request) {
+        setError('No response received from server. Please try again.');
       } else {
-        setError('Network error. Please try again.');
+        setError(`Error setting up request: ${err.message}`);
       }
     } finally {
       setLoading(false);
@@ -136,7 +144,7 @@ const AddEmployee = () => {
   return (
     <div className="max-w-4xl mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
       <h2 className="text-2xl font-bold mb-6">Add New Employee</h2>
-      
+
       {error && (
         <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
           {error}
@@ -336,9 +344,8 @@ const AddEmployee = () => {
         <button
           type="submit"
           disabled={loading}
-          className={`w-full mt-6 ${
-            loading ? 'bg-gray-400' : 'bg-teal-600 hover:bg-teal-700'
-          } text-white font-bold py-2 px-4 rounded`}
+          className={`w-full mt-6 ${loading ? 'bg-gray-400' : 'bg-teal-600 hover:bg-teal-700'
+            } text-white font-bold py-2 px-4 rounded`}
         >
           {loading ? 'Adding Employee...' : 'Add Employee'}
         </button>

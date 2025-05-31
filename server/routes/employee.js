@@ -8,6 +8,7 @@ import {
   upload,
   getEmployeeCount,
   getLatestEmployeeId,
+  deleteEmployee,
   getEmployeeByUserId
 } from "../controllers/employeeController.js";
 
@@ -36,5 +37,7 @@ router.get("/:id", getEmployee);
 
 // Route to update an employee's details
 router.put("/:id", updateEmployee);
+
+router.delete("/:id", deleteEmployee);
 
 export default router;

@@ -124,9 +124,11 @@ const addEmployee = async (req, res) => {
     }
 
     if (existingEmployee) {
+      // More specific error for duplicate Employee ID
       return res.status(400).json({
         success: false,
-        error: "Employee ID already exists"
+        error: `Employee ID '${employee_id}' already exists. Please try adding again.`,
+        details: "Duplicate Employee ID"
       });
     }
 
@@ -465,6 +467,40 @@ const getEmployeeByUserId = async (req, res) => {
   }
 };
 
+const deleteEmployee = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Find the employee first to get the user_id
+    const employee = await Employee.findById(id);
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        error: "Employee not found"
+      });
+    }
+
+    // Delete the employee first
+    await Employee.findByIdAndDelete(id);
+
+    // Then delete the associated user
+    await User.findByIdAndDelete(employee.user_id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Employee and associated user deleted successfully"
+    });
+
+  } catch (error) {
+    console.error("Error in deleteEmployee:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Failed to delete employee",
+      details: error.message
+    });
+  }
+};
+
 export {
   addEmployee,
   upload,
@@ -474,5 +510,6 @@ export {
   fetchEmployeesByDepId,
   getEmployeeCount,
   getLatestEmployeeId,
-  getEmployeeByUserId
+  getEmployeeByUserId,
+  deleteEmployee
 };

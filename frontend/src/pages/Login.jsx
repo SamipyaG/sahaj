@@ -76,8 +76,8 @@ const Login = () => {
               <input type="checkbox" className="form-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500" />
               <span className="ml-2 text-gray-700">Remember me</span>
             </label>
-            
-            
+
+
           </div>
           <div className="mb-4">
             <button
