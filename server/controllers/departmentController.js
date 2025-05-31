@@ -13,13 +13,13 @@ const getDepartments = async (req, res) => {
 // Add a new department
 const addDepartment = async (req, res) => {
     try {
-        const { department_id, department_name, department_description, paid_leave } = req.body;
+        const { department_id, department_name, department_description } = req.body;
 
         // Validate required fields
         if (!department_id || !department_name || !department_description) {
-            return res.status(400).json({ 
-                success: false, 
-                error: "Department ID, name, and description are required" 
+            return res.status(400).json({
+                success: false,
+                error: "Department ID, name, and description are required"
             });
         }
 
@@ -30,11 +30,10 @@ const addDepartment = async (req, res) => {
         }
 
         // Create new department
-        const newDep = new Department({ 
-            department_id, 
+        const newDep = new Department({
+            department_id,
             department_name,
             department_description,
-            paid_leave: paid_leave || 16 // Default to 16 if not provided
         });
 
         await newDep.save();
@@ -65,7 +64,7 @@ const getDepartment = async (req, res) => {
 const updateDepartment = async (req, res) => {
     try {
         const { id } = req.params;
-        const { department_name, department_description, paid_leave } = req.body;
+        const { department_name, department_description } = req.body;
 
         // Validate required fields
         if (!department_name || !department_description) {
@@ -74,7 +73,7 @@ const updateDepartment = async (req, res) => {
 
         const updatedDep = await Department.findByIdAndUpdate(
             id,
-            { department_name, department_description, paid_leave },
+            { department_name, department_description },
             { new: true, runValidators: true } // Return updated document and run schema validators
         );
 

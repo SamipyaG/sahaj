@@ -40,7 +40,7 @@ const AddLeave = () => {
             }
           }
         );
-        
+
         const formattedLeaveTypes = response.data.leaveSetups.map((leaveSetup) => ({
           type: leaveSetup.leaveType,
           id: leaveSetup._id,
@@ -57,7 +57,7 @@ const AddLeave = () => {
         setIsLoading(false);
       }
     };
-    
+
     fetchLeaveTypes();
   }, []);
 
@@ -86,18 +86,18 @@ const AddLeave = () => {
   // Handle other form field changes
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
+
     // For end date, ensure it's not before start date
     if (name === "endDate" && formData.startDate && value < formData.startDate) {
       setError("End date cannot be before start date");
       return;
     }
-    
-    setFormData(prev => ({ 
-      ...prev, 
-      [name]: value 
+
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
     }));
-    
+
     // Clear error when user corrects input
     if (error) setError("");
   };
@@ -107,11 +107,11 @@ const AddLeave = () => {
     try {
       const start = dayjs(startDate);
       const end = dayjs(endDate);
-      
+
       if (end.isBefore(start)) {
         return 0;
       }
-      
+
       return end.diff(start, 'day') + 1; // Inclusive of both dates
     } catch (error) {
       return 0;
@@ -143,12 +143,6 @@ const AddLeave = () => {
     }
     if (!formData.reason.trim()) {
       setError("Please provide a reason for leave");
-      return false;
-    }
-
-    // Validate against max days
-    if (selectedLeaveType && numOfDays > selectedLeaveType.maxDays) {
-      setError(`Maximum ${selectedLeaveType.maxDays} days allowed for ${selectedLeaveType.type}`);
       return false;
     }
 
@@ -192,7 +186,7 @@ const AddLeave = () => {
   return (
     <div className="max-w-2xl mx-auto p-4 sm:p-6 bg-white rounded-lg shadow-md">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">New Leave Request</h1>
-      
+
       {/* Success Message */}
       {success && (
         <div className="mb-4 p-4 bg-green-100 text-green-700 rounded-lg">
@@ -204,6 +198,13 @@ const AddLeave = () => {
       {error && (
         <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
           {error}
+        </div>
+      )}
+
+      {/* Warning for excess days */}
+      {selectedLeaveType && numOfDays > 0 && numOfDays > selectedLeaveType.maxDays && (
+        <div className="mb-4 p-4 bg-yellow-100 text-yellow-700 rounded-lg">
+          <p>You are requesting {numOfDays - selectedLeaveType.maxDays} days more than your allowed balance ({selectedLeaveType.maxDays} days) for {selectedLeaveType.type}. Salary deduction will apply for these excess days.</p>
         </div>
       )}
 
@@ -278,11 +279,10 @@ const AddLeave = () => {
 
           {/* Days Calculation */}
           {numOfDays > 0 && (
-            <div className={`p-3 rounded-md ${
-              selectedLeaveType && numOfDays > selectedLeaveType.maxDays 
-                ? 'bg-red-50 text-red-800' 
+            <div className={`p-3 rounded-md ${selectedLeaveType && numOfDays > selectedLeaveType.maxDays
+                ? 'bg-red-50 text-red-800'
                 : 'bg-blue-50 text-blue-800'
-            }`}>
+              }`}>
               <p className="text-sm">
                 Total Leave Days: <span className="font-bold">{numOfDays}</span>
                 {selectedLeaveType && (
@@ -329,11 +329,10 @@ const AddLeave = () => {
             <button
               type="submit"
               disabled={isSubmitting || (selectedLeaveType && numOfDays > selectedLeaveType.maxDays)}
-              className={`px-6 py-2 rounded-md text-white ${
-                isSubmitting || (selectedLeaveType && numOfDays > selectedLeaveType.maxDays)
+              className={`px-6 py-2 rounded-md text-white ${isSubmitting || (selectedLeaveType && numOfDays > selectedLeaveType.maxDays)
                   ? 'bg-teal-300 cursor-not-allowed'
                   : 'bg-teal-600 hover:bg-teal-700'
-              }`}
+                }`}
             >
               {isSubmitting ? (
                 <>

@@ -3,26 +3,26 @@ import { Schema } from "mongoose";
 
 const salarySchema = new Schema(
   {
-    employee_id: { 
-      type: Schema.Types.ObjectId, 
-      ref: 'Employee', 
-      required: true 
+    employee_id: {
+      type: Schema.Types.ObjectId,
+      ref: 'Employee',
+      required: true
     },
-    salary_id: { 
-      type: Number, 
-      required: true, 
-      unique: true 
+    salary_id: {
+      type: Number,
+      required: true,
+      unique: true
     },
-    designation_id: { 
-      type: Schema.Types.ObjectId, 
-      ref: 'Designation', 
-      required: true 
+    designation_id: {
+      type: Schema.Types.ObjectId,
+      ref: 'Designation',
+      required: true
     },
-    pay_date: { 
-      type: Date, 
+    pay_date: {
+      type: Date,
       required: true,
       validate: {
-        validator: function(date) {
+        validator: function (date) {
           return date <= new Date();
         },
         message: "Pay date cannot be in the future"
@@ -42,9 +42,11 @@ const salarySchema = new Schema(
       type: Number,
       default: 0,
       min: 0
-    }
+    },
+    excess_leave_deduction: { type: Number, default: 0, min: 0 },
+    basic_salary_at_pay: { type: Number },
   },
-  { 
+  {
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true }
@@ -52,7 +54,7 @@ const salarySchema = new Schema(
 );
 
 // Virtual field for net_salary with safe access
-salarySchema.virtual('net_salary').get(function() {
+salarySchema.virtual('net_salary').get(function () {
   const basic = this.designation_id?.basic_salary || 0;
   return basic + (this.allowances || 0) - (this.tax || 0) - (this.deductions || 0);
 });

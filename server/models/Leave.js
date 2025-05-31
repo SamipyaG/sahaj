@@ -6,9 +6,10 @@ const leaveSchema = new Schema(
     leave_id: { type: String, required: true, unique: true }, // Primary Key
     employee_id: { type: Schema.Types.ObjectId, ref: "Employee", required: true }, // Foreign Key to Employee
     leave_setup_id: { type: Schema.Types.ObjectId, ref: "LeaveSetup", required: true }, // Foreign Key to LeaveSetup
-    startDate:{type:Date,required:true},
-    endDate:{type:Date,required:true},
+    startDate: { type: Date, required: true },
+    endDate: { type: Date, required: true },
     numOfDays: { type: Number, required: true }, // Number of leave days
+    excessDays: { type: Number, default: 0 }, // Number of excess leave days
     reason: { type: String, required: true }, // Reason for leave
     status: {
       type: String,

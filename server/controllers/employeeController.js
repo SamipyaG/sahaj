@@ -62,7 +62,7 @@ const populateEmployeeData = async (employee) => {
 const addEmployee = async (req, res) => {
   try {
     const requiredFields = [
-      'employee_name', 'email', 'employee_id',
+      'employee_name', 'email',
       'department_id', 'designation_id', 'password', 'role'
     ];
 
@@ -99,21 +99,31 @@ const addEmployee = async (req, res) => {
       }
     }
 
-    // Trim and validate employee_id
-    const employee_id = req.body.employee_id ? req.body.employee_id.toString().trim() : null;
-    if (!employee_id) {
-      return res.status(400).json({
-        success: false,
-        error: "Employee ID cannot be empty"
-      });
+    const { email, password, department_id, designation_id } = req.body;
+
+    // Fetch Department and Designation details
+    const department = await Department.findById(department_id);
+    const designation = await Designation.findById(designation_id);
+
+    if (!department) {
+      return res.status(400).json({ success: false, error: "Invalid Department ID" });
+    }
+    if (!designation) {
+      return res.status(400).json({ success: false, error: "Invalid Designation ID" });
     }
 
-    const { email, password } = req.body;
+    // Generate employeeId
+    const totalEmployees = await Employee.countDocuments();
+    const employeeNumber = totalEmployees + 1;
+    const departmentCode = department.department_name.substring(0, 2).toUpperCase();
+    const designationCode = designation.title.substring(0, 2).toUpperCase();
+    const generatedEmployeeId = `${designationCode}${departmentCode}${employeeNumber}`;
 
     // Check for existing records with more strict validation
     const [existingUser, existingEmployee] = await Promise.all([
       User.findOne({ email: email.trim() }),
-      Employee.findOne({ employee_id })
+      // Check if the generated employeeId already exists (highly unlikely with counter, but good practice)
+      Employee.findOne({ employee_id: generatedEmployeeId })
     ]);
 
     if (existingUser) {
@@ -123,12 +133,12 @@ const addEmployee = async (req, res) => {
       });
     }
 
+    // Although we generate unique ID, a rare race condition could occur. Double check.
     if (existingEmployee) {
-      // More specific error for duplicate Employee ID
-      return res.status(400).json({
+      return res.status(500).json({
         success: false,
-        error: `Employee ID '${employee_id}' already exists. Please try adding again.`,
-        details: "Duplicate Employee ID"
+        error: "Generated Employee ID conflict, please try again.",
+        details: `Generated ID ${generatedEmployeeId} already exists`
       });
     }
 
@@ -144,9 +154,9 @@ const addEmployee = async (req, res) => {
 
     const savedUser = await newUser.save();
 
-    // Create employee with validated data
+    // Create employee with validated data and generated ID
     const newEmployee = new Employee({
-      employee_id,
+      employee_id: generatedEmployeeId, // Use generated ID
       employee_name: req.body.employee_name.trim(),
       user_id: savedUser._id,
       department_id: req.body.department_id,

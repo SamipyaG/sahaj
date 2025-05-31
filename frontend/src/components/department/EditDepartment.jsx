@@ -10,7 +10,6 @@ const EditDepartment = () => {
     department_id: "",
     department_name: "",
     department_description: "",
-    paid_leave: 16, // Default value
   });
 
   const [depLoading, setDepLoading] = useState(false);
@@ -140,20 +139,6 @@ const EditDepartment = () => {
                 placeholder="Department Description"
                 className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
                 rows="4"
-              />
-            </div>
-
-            <div className="mt-3">
-              <label htmlFor="paid_leave" className="text-sm font-medium text-gray-700">
-                Paid Leave
-              </label>
-              <input
-                type="number"
-                name="paid_leave"
-                value={department.paid_leave}
-                onChange={handleChange}
-                className="mt-1 w-full p-2 border border-gray-300 rounded-md"
-                min="0"
               />
             </div>
 

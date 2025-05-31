@@ -103,13 +103,9 @@ const addLeave = async (req, res) => {
         const consumedDays = approvedLeaves.reduce((sum, leave) => sum + leave.numOfDays, 0);
         const remainingDays = leaveSetup.maxDays - consumedDays;
 
+        let excessDays = 0;
         if (numOfDays > remainingDays) {
-            return res.status(400).json({
-                success: false,
-                error: `Insufficient leave balance. You have ${remainingDays} days remaining for ${leaveSetup.leaveType}`,
-                remainingDays,
-                maxDays: leaveSetup.maxDays
-            });
+            excessDays = numOfDays - remainingDays;
         }
 
         // Create new leave
@@ -122,6 +118,7 @@ const addLeave = async (req, res) => {
             endDate: new Date(endDate),
             reason,
             numOfDays,
+            excessDays,
             status: "Pending"
         });
 

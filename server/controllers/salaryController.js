@@ -3,6 +3,7 @@ import Salary from '../models/Salary.js';
 import Employee from '../models/Employee.js';
 import cron from 'node-cron';
 import SalaryConfig from '../models/salaryConfig.js';
+import Leave from '../models/Leave.js';
 
 // Tax configuration
 const TAX_BRACKETS = [
@@ -97,6 +98,32 @@ export const generateMonthlySalaries = async () => {
         const annualSalary = employee.designation_id.basic_salary * 12;
         const monthlyTax = calculateTax(annualSalary) / 12;
 
+        // Calculate deductions for excess leave days in the current month
+        const startOfMonth = new Date(currentYear, currentMonth, 1);
+        const endOfMonth = new Date(currentYear, currentMonth + 1, 0);
+
+        const approvedExcessLeaves = await Leave.find({
+          employee_id: employee._id,
+          status: "Approved",
+          excessDays: { $gt: 0 },
+          $or: [
+            { startDate: { $gte: startOfMonth, $lte: endOfMonth } },
+            { endDate: { $gte: startOfMonth, $lte: endOfMonth } },
+            { $and: [{ startDate: { $lte: startOfMonth } }, { endDate: { $gte: endOfMonth } }] }
+          ]
+        });
+
+        let totalExcessLeaveDeduction = 0;
+        if (approvedExcessLeaves.length > 0) {
+          const perDaySalary = employee.designation_id.basic_salary / 30;
+          approvedExcessLeaves.forEach(leave => {
+            // Need to calculate the number of excess days within the current month
+            // This is a simplified calculation; a more accurate one would consider partial months
+            const applicableExcessDays = Math.min(leave.excessDays, calculateLeaveDays(Math.max(startOfMonth, leave.startDate), Math.min(endOfMonth, leave.endDate)));
+            totalExcessLeaveDeduction += applicableExcessDays * perDaySalary;
+          });
+        }
+
         const newSalary = new Salary({
           employee_id: employee._id,
           designation_id: employee.designation_id._id,
@@ -104,7 +131,9 @@ export const generateMonthlySalaries = async () => {
           pay_date: new Date(currentYear, currentMonth, 28),
           tax: monthlyTax,
           allowances: employee.allowances || 0,
-          deductions: employee.deductions || 0
+          deductions: (employee.deductions || 0) + totalExcessLeaveDeduction, // Add excess leave deduction to other deductions
+          excess_leave_deduction: totalExcessLeaveDeduction, // Store excess leave deduction separately
+          basic_salary_at_pay: employee.designation_id.basic_salary, // Store basic salary at the time of payment
         });
 
         await newSalary.save();
