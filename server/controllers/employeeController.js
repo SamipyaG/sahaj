@@ -117,7 +117,8 @@ const addEmployee = async (req, res) => {
     const employeeNumber = totalEmployees + 1;
     const departmentCode = department.department_name.substring(0, 2).toUpperCase();
     const designationCode = designation.title.substring(0, 2).toUpperCase();
-    const generatedEmployeeId = `${designationCode}${departmentCode}${employeeNumber}`;
+    const paddedNumber = employeeNumber.toString().padStart(2, '0');
+    const generatedEmployeeId = `${designationCode}-${departmentCode}-${paddedNumber}`;
 
     // Check for existing records with more strict validation
     const [existingUser, existingEmployee] = await Promise.all([

@@ -47,7 +47,7 @@ const AddEmployee = () => {
   const fetchLatestEmployeeId = async () => {
     try {
       const response = await axios.get(
-        'http://localhost:5000/api/employee/latest/id',
+        'http://localhost:5000/api/employee/latest-id',
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -68,11 +68,11 @@ const AddEmployee = () => {
       const designation = designations.find(d => d._id === formData.designation_id);
 
       if (department && designation) {
-        const deptPrefix = department.department_name.substring(0, 2).toUpperCase();
         const desigPrefix = designation.title.substring(0, 2).toUpperCase();
-        const paddedSerial = serialNumber.toString().padStart(4, '0');
+        const deptPrefix = department.department_name.substring(0, 2).toUpperCase();
+        const paddedSerial = serialNumber.toString().padStart(2, '0');
 
-        const generatedId = `${deptPrefix}-${desigPrefix}-${paddedSerial}`;
+        const generatedId = `${desigPrefix}-${deptPrefix}-${paddedSerial}`;
         setFormData(prev => ({ ...prev, employee_id: generatedId }));
       }
     }
@@ -104,7 +104,7 @@ const AddEmployee = () => {
 
     try {
       const response = await axios.post(
-        'http://localhost:5000/api/employees',
+        'http://localhost:5000/api/employee/add',
         formDataObj,
         {
           headers: {
