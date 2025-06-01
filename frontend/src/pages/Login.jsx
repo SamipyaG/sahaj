@@ -1,30 +1,53 @@
 import axios from "axios";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/authContext";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    // Clear any existing session data on login page
+    localStorage.removeItem("token");
+    sessionStorage.removeItem("userRole");
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError(null);
+
     try {
       const response = await axios.post(
         `http://localhost:5000/api/auth/login`,
         { email, password }
       );
+
       if (response.data.success) {
-        login(response.data.user);
-        localStorage.setItem("token", response.data.token);
-        if (response.data.user.role === "admin") {
-          navigate("/admin-dashboard");
-        } else {
-          navigate("/employee-dashboard");
+        // Check if there's an existing session
+        const existingToken = localStorage.getItem("token");
+        const existingRole = sessionStorage.getItem("userRole");
+
+        if (existingToken || existingRole) {
+          // Clear existing session
+          localStorage.removeItem("token");
+          sessionStorage.removeItem("userRole");
         }
+
+        // Set new session
+        login(response.data.user, response.data.token);
+
+        // Redirect based on role
+        const redirectPath = response.data.user.role === "admin"
+          ? "/admin-dashboard"
+          : "/employee-dashboard";
+        navigate(redirectPath, { replace: true });
       } else {
         setError(response.data.error || 'Login failed.');
       }
@@ -41,14 +64,14 @@ const Login = () => {
       } else {
         setError(`Error setting up request: ${error.message}`);
       }
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div
-      className="flex flex-col items-center h-screen justify-center 
-    bg-gradient-to-b from-blue-600 from-50% to-orange-100 to-50% space-y-6"
-    >
+    <div className="flex flex-col items-center h-screen justify-center 
+      bg-gradient-to-b from-blue-600 from-50% to-orange-100 to-50% space-y-6">
       <h2 className="font-pacific text-4xl text-white font-bold">
         Sajilo Bida
       </h2>
@@ -64,8 +87,10 @@ const Login = () => {
               type="email"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Enter Email"
+              value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={loading}
             />
           </div>
           <div className="mb-6">
@@ -76,8 +101,10 @@ const Login = () => {
               type="password"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="*****"
+              value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              disabled={loading}
             />
           </div>
           <div className="mb-6 flex items-center justify-between">
@@ -92,9 +119,10 @@ const Login = () => {
           <div className="mb-4">
             <button
               type="submit"
-              className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-all duration-300"
+              className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={loading}
             >
-              Login
+              {loading ? 'Logging in...' : 'Login'}
             </button>
           </div>
         </form>

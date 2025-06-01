@@ -17,6 +17,11 @@ export const columns = [
     sortable: true
   },
   {
+    name: "Allowance",
+    selector: (row) => row.allowance,
+    sortable: true
+  },
+  {
     name: "Description",
     selector: (row) => row.description,
   },

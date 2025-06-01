@@ -3,13 +3,13 @@ import Designation from '../models/Designation.js';
 // Create a new designation
 const addDesignation = async (req, res) => {
     try {
-        const { title, basic_salary, description } = req.body;
+        const { title, basic_salary, allowance, description } = req.body;
 
         // Validate required fields
         if (!title || !basic_salary) {
-            return res.status(400).json({ 
-                success: false, 
-                error: "Title and basic salary are required" 
+            return res.status(400).json({
+                success: false,
+                error: "Title and basic salary are required"
             });
         }
 
@@ -21,6 +21,7 @@ const addDesignation = async (req, res) => {
             designation_id,
             title,
             basic_salary,
+            allowance: allowance || 0, // Default to 0 if not provided
             description: description || '' // Default to empty string if not provided
         });
 
@@ -48,7 +49,7 @@ const getDesignationById = async (req, res) => {
     try {
         const { id } = req.params;
         const designation = await Designation.findById(id);
-        
+
         if (!designation) {
             return res.status(404).json({ success: false, error: "Designation not found" });
         }
@@ -63,16 +64,16 @@ const getDesignationById = async (req, res) => {
 const updateDesignation = async (req, res) => {
     try {
         const { id } = req.params;
-        const { designation_name, basic_salary, allowances, deductions } = req.body;
+        const { title, basic_salary, allowance, description } = req.body;
 
         // Validate required fields
-        if (!designation_name || !basic_salary) {
-            return res.status(400).json({ success: false, error: "Designation name and basic salary are required" });
+        if (!title || !basic_salary) {
+            return res.status(400).json({ success: false, error: "Title and basic salary are required" });
         }
 
         const updatedDesignation = await Designation.findByIdAndUpdate(
             id,
-            { designation_name, basic_salary, allowances, deductions },
+            { title, basic_salary, allowance, description },
             { new: true, runValidators: true } // Return updated document and run schema validators
         );
 
@@ -91,7 +92,7 @@ const deleteDesignation = async (req, res) => {
     try {
         const { id } = req.params;
         const deletedDesignation = await Designation.findByIdAndDelete(id);
-        
+
         if (!deletedDesignation) {
             return res.status(404).json({ success: false, error: "Designation not found" });
         }

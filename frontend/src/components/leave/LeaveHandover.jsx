@@ -14,6 +14,8 @@ const LeaveHandover = ({ isAdmin = false }) => {
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [handoverNotes, setHandoverNotes] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const initializeData = async () => {
@@ -36,6 +38,37 @@ const LeaveHandover = ({ isAdmin = false }) => {
 
     initializeData();
   }, [isAdmin]);
+
+  // Real-time validation when leave or employee selection changes
+  useEffect(() => {
+    const validateSelection = async () => {
+      if (!selectedLeave || !selectedEmployee) return;
+
+      try {
+        const response = await axios.post(
+          'http://localhost:5000/api/leave-handover/validate',
+          {
+            leave_id: selectedLeave,
+            to_employee_id: selectedEmployee
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`
+            }
+          }
+        );
+
+        setValidationErrors(response.data.errors || {});
+      } catch (err) {
+        console.error('Validation error:', err);
+        setValidationErrors({
+          general: err.response?.data?.error || 'Failed to validate selection'
+        });
+      }
+    };
+
+    validateSelection();
+  }, [selectedLeave, selectedEmployee]);
 
   const fetchHandovers = async () => {
     try {
@@ -163,12 +196,15 @@ const LeaveHandover = ({ isAdmin = false }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (Object.keys(validationErrors).length > 0) {
+      return;
+    }
+
     try {
+      setIsSubmitting(true);
       const endpoint = isAdmin ? 'http://localhost:5000/api/leave-handover/admin' : 'http://localhost:5000/api/leave-handover';
 
-      // Find the selected leave
       const selectedLeaveData = leaves.find(l => l._id === selectedLeave);
-
       if (!selectedLeaveData) {
         setError('Selected leave not found');
         return;
@@ -200,12 +236,14 @@ const LeaveHandover = ({ isAdmin = false }) => {
         setSelectedLeave('');
         setSelectedEmployee('');
         setHandoverNotes('');
-        setError(null);
+        setValidationErrors({});
         await fetchHandovers();
       }
     } catch (err) {
       console.error('Error creating handover:', err);
       setError(err.response?.data?.error || 'Failed to create handover');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -278,6 +316,9 @@ const LeaveHandover = ({ isAdmin = false }) => {
                   </option>
                 ))}
               </select>
+              {validationErrors.leave && (
+                <p className="text-red-500 text-sm mt-1">{validationErrors.leave}</p>
+              )}
             </div>
 
             <div>
@@ -297,6 +338,9 @@ const LeaveHandover = ({ isAdmin = false }) => {
                   </option>
                 ))}
               </select>
+              {validationErrors.employee && (
+                <p className="text-red-500 text-sm mt-1">{validationErrors.employee}</p>
+              )}
             </div>
           </div>
 
@@ -314,12 +358,20 @@ const LeaveHandover = ({ isAdmin = false }) => {
             />
           </div>
 
+          {validationErrors.general && (
+            <div className="mb-4 text-red-500 text-sm">
+              {validationErrors.general}
+            </div>
+          )}
+
           <div className="mt-6">
             <button
               type="submit"
-              className="bg-teal-500 text-white px-6 py-2 rounded hover:bg-teal-600 transition-colors"
+              disabled={isSubmitting || Object.keys(validationErrors).length > 0}
+              className={`bg-teal-500 text-white px-6 py-2 rounded hover:bg-teal-600 transition-colors ${(isSubmitting || Object.keys(validationErrors).length > 0) && 'opacity-50 cursor-not-allowed'
+                }`}
             >
-              Create Handover
+              {isSubmitting ? 'Creating...' : 'Create Handover'}
             </button>
           </div>
         </form>

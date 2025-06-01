@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useParams } from 'react-router-dom';
 
 const EmployeeList = () => {
@@ -8,6 +8,7 @@ const EmployeeList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { id } = useParams();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchEmployee = async () => {
@@ -29,7 +30,7 @@ const EmployeeList = () => {
         setLoading(false);
       }
     };
-    
+
     fetchEmployee();
   }, [id]);
 
@@ -56,12 +57,12 @@ const EmployeeList = () => {
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Employee</h3>
           <p className="text-red-600 mb-4">{error}</p>
-          <Link
-            to="/"
+          <button
+            onClick={() => navigate(-1)}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
-            ← Back to Dashboard
-          </Link>
+            ← Back
+          </button>
         </div>
       </div>
     );
@@ -78,12 +79,12 @@ const EmployeeList = () => {
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">Employee Not Found</h3>
           <p className="text-gray-500 mb-4">No employee found with this ID</p>
-          <Link
-            to="/"
+          <button
+            onClick={() => navigate(-1)}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
-            ← Back to Dashboard
-          </Link>
+            ← Back
+          </button>
         </div>
       </div>
     );
@@ -94,12 +95,12 @@ const EmployeeList = () => {
       <div className="max-w-4xl mx-auto">
         <div className="mb-8 flex justify-between items-center">
           <h2 className="text-3xl font-extrabold text-gray-900">Employee Profile</h2>
-          <Link
-            to="/"
+          <button
+            onClick={() => navigate(-1)}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
-            ← Back to Dashboard
-          </Link>
+            ← Back
+          </button>
         </div>
 
         <div className="bg-white shadow overflow-hidden sm:rounded-lg">
@@ -137,7 +138,7 @@ const EmployeeList = () => {
                         e.target.src = '/default-profile.png';
                       }}
                     />
-                    
+
                   </div>
                 </dd>
               </div>
@@ -162,8 +163,8 @@ const EmployeeList = () => {
               <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                 <dt className="text-sm font-medium text-gray-500">Basic Salary</dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  {employee.basic_salary || employee.designation_id?.basic_salary 
-                    ? `$${(employee.basic_salary || employee.designation_id?.basic_salary).toLocaleString()}` 
+                  {employee.basic_salary || employee.designation_id?.basic_salary
+                    ? `$${(employee.basic_salary || employee.designation_id?.basic_salary).toLocaleString()}`
                     : 'N/A'}
                 </dd>
               </div>
@@ -204,7 +205,7 @@ const EmployeeList = () => {
         </div>
 
         <div className="mt-6 flex justify-end">
-          
+
         </div>
       </div>
     </div>

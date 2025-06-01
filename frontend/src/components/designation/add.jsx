@@ -5,8 +5,9 @@ import { useNavigate } from "react-router-dom";
 const AddDesignation = () => {
     const [designation, setDesignation] = useState({
         title: '',
-        basic_salary: '',  
-        description: '',    
+        basic_salary: '',
+        allowance: '',
+        description: '',
     });
 
     const navigate = useNavigate();
@@ -26,7 +27,7 @@ const AddDesignation = () => {
 
         try {
             const response = await axios.post(
-                `http://localhost:5000/api/designation/add`, 
+                `http://localhost:5000/api/designation/add`,
                 designation,
                 {
                     headers: {
@@ -71,6 +72,19 @@ const AddDesignation = () => {
                         value={designation.basic_salary}
                         onChange={handleChange}
                         placeholder="Basic Salary"
+                        className="mt-1 w-full p-2 border border-gray-300 rounded-md"
+                        required
+                    />
+                </div>
+
+                <div className="mt-3">
+                    <label className="text-sm font-medium text-gray-700">Allowance*</label>
+                    <input
+                        type="number"
+                        name="allowance"
+                        value={designation.allowance}
+                        onChange={handleChange}
+                        placeholder="Allowance Amount"
                         className="mt-1 w-full p-2 border border-gray-300 rounded-md"
                         required
                     />

@@ -25,6 +25,7 @@ const DesignationList = () => {
           sno: sno++,
           title: des.title,  // Changed from designation_name to title
           basic_salary: des.basic_salary,  // Fixed case (basic_Salary to basic_salary)
+          allowance: des.allowance || 0, // Added allowance field with default value
           description: des.description || "N/A",  // Added description field
           action: (
             <DesignationButtons Id={des._id} onDesignationDelete={fetchDesignations} />
