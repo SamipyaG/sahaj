@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
+import { FaSpinner } from 'react-icons/fa';
 
 const EmployeeSalaryView = () => {
   const { id } = useParams();
@@ -11,17 +12,19 @@ const EmployeeSalaryView = () => {
   useEffect(() => {
     const fetchSalaries = async () => {
       try {
-        const token = localStorage.getItem('token');
         const response = await axios.get(`http://localhost:5000/api/salary/${id}`, {
           headers: {
-            Authorization: `Bearer ${token}`
+            Authorization: `Bearer ${localStorage.getItem('token')}`
           }
         });
-        setSalaries(response.data.data);
-        setLoading(false);
-      } catch (err) {
-        console.error('Error fetching salaries:', err);
-        setError(err.response?.data?.error || 'Failed to fetch salary data');
+
+        if (response.data.success) {
+          setSalaries(response.data.data.docs);
+        }
+      } catch (error) {
+        console.error('Error fetching salaries:', error);
+        setError(error.response?.data?.error || 'Failed to fetch salary records');
+      } finally {
         setLoading(false);
       }
     };
@@ -32,52 +35,83 @@ const EmployeeSalaryView = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+        <FaSpinner className="animate-spin h-8 w-8 text-indigo-600" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-        <strong className="font-bold">Error!</strong>
-        <span className="block sm:inline"> {error}</span>
+      <div className="text-center text-red-600 p-4">
+        {error}
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h2 className="text-2xl font-bold mb-6">Salary History</h2>
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white border border-gray-300">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="px-6 py-3 border-b text-left">Type</th>
-              <th className="px-6 py-3 border-b text-left">Basic Salary</th>
-              <th className="px-6 py-3 border-b text-left">Allowances</th>
-              <th className="px-6 py-3 border-b text-left">Tax</th>
-              <th className="px-6 py-3 border-b text-left">Leave Deduction</th>
-              <th className="px-6 py-3 border-b text-left">Net Salary</th>
-              <th className="px-6 py-3 border-b text-left">Pay Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {salaries.map((salary) => (
-              <tr key={salary._id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 border-b">{salary.salary_type}</td>
-                <td className="px-6 py-4 border-b">₹{salary.basic_salary?.toLocaleString() || 0}</td>
-                <td className="px-6 py-4 border-b">₹{salary.allowances?.toLocaleString() || 0}</td>
-                <td className="px-6 py-4 border-b">₹{salary.tax?.toLocaleString() || 0}</td>
-                <td className="px-6 py-4 border-b">₹{salary.leave_deduction?.toLocaleString() || 0}</td>
-                <td className="px-6 py-4 border-b">₹{salary.net_salary?.toLocaleString() || 0}</td>
-                <td className="px-6 py-4 border-b">
-                  {new Date(salary.pay_date).toLocaleDateString()}
-                </td>
+    <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+      <div className="px-4 py-5 sm:px-6">
+        <h3 className="text-lg leading-6 font-medium text-gray-900">
+          Salary History
+        </h3>
+      </div>
+      <div className="border-t border-gray-200">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Type
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Basic Salary
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Allowances
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Tax
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Leave Deduction
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Net Salary
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Pay Date
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {salaries.map((salary) => (
+                <tr key={salary._id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {salary.salary_type}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    ₹{salary.designation_id?.basic_salary?.toLocaleString() || 0}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    ₹{salary.designation_id?.allowance?.toLocaleString() || 0}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    ₹{salary.tax?.toLocaleString() || 0}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    ₹{salary.leave_deduction?.toLocaleString() || 0}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-indigo-600">
+                    ₹{salary.net_salary?.toLocaleString() || 0}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {new Date(salary.pay_date).toLocaleDateString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

@@ -129,7 +129,7 @@ exports.updateHandoverStatus = async (req, res) => {
     if (handover.to_employee_id.toString() !== req.user.employee_id.toString()) {
       return res.status(403).json({
         success: false,
-        error: 'Not authorized to update this handover'
+        error: 'Only '
       });
     }
 

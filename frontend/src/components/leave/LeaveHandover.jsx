@@ -280,13 +280,13 @@ const LeaveHandover = ({ isAdmin = false }) => {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">
-          {isAdmin ? 'Leave Handover Management' : 'Leave Handover'}
+          {isAdmin ? 'Role Handover Management' : 'Role Handover'}
         </h1>
         <button
           onClick={() => setShowForm(!showForm)}
           className="bg-teal-500 text-white px-4 py-2 rounded hover:bg-teal-600 transition-colors"
         >
-          {showForm ? 'Cancel' : 'Create Handover'}
+          {showForm ? 'Cancel' : 'Create Role Handover'}
         </button>
       </div>
 

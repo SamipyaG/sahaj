@@ -90,7 +90,7 @@ function App() {
         <Route path="leaves/:id" element={<Detail />} />
         <Route path="employees/leaves/:id" element={<LeaveList />} />
 
-        {/* Leave Handover Management Routes (Admin)*/}
+        {/* Role Handover Management Routes (Admin)*/}
         <Route path="leave-handover" element={<LeaveHandover isAdmin={true} />} />
 
         <Route path="setting" element={<Setting />} />

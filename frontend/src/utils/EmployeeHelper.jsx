@@ -99,8 +99,48 @@ export const getEmployees = async (id) => {
   }
   return [];
 };
+
+export const EmployeeButtons = ({ Id }) => {
+  const navigate = useNavigate();
+
+  return (
+    <div className="flex items-center justify-start space-x-2">
+      <button
+        className="px-3 py-1 bg-teal-600 text-white rounded hover:bg-teal-700 transition-colors"
+        onClick={() => navigate(`/admin-dashboard/employees/${Id}`)}
+      >
+        View
+      </button>
+      <button
+        className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+        onClick={() => navigate(`/admin-dashboard/employees/edit/${Id}`)}
+      >
+        Edit
+      </button>
+      <button
+        className="px-3 py-1 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors"
+        onClick={() => navigate(`/admin-dashboard/employees/salary/${Id}`)}
+      >
+        Salary
+      </button>
+      <button
+        className="px-3 py-1 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors"
+        onClick={() => navigate(`/admin-dashboard/employees/leaves/${Id}`)}
+      >
+        Leave
+      </button>
+      <button
+        className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+        onClick={() => handleDelete(Id)}
+      >
+        Delete
+      </button>
+    </div>
+  );
+};
+
 const handleDelete = async (id) => {
-  const confirm = window.confirm("Are you sure the employee have left the company ?");
+  const confirm = window.confirm("Are you sure you want to remove this employee from the system?");
   if (confirm) {
     try {
       const response = await axios.delete(
@@ -112,58 +152,15 @@ const handleDelete = async (id) => {
         }
       );
       if (response.data.success) {
-        console.log(response.data)
-        alert('Employee deleted successfully ')
+        alert('Employee has been successfully removed from the system');
         window.location.reload();
-
       }
     } catch (error) {
       if (error.response && !error.response.data.success) {
-        alert(error.response.data.error);
+        alert(error.response.data.error || "Unable to remove employee. Please try again.");
       } else {
-        alert("An error occurred while deleting the employee ");
+        alert("Something went wrong. Please try again later.");
       }
     }
   }
-};
-
-export const EmployeeButtons = ({ Id }) => {
-  const navigate = useNavigate();
-
-  return (
-    <div className="flex flex-wrap gap-3">
-      <button
-        className="px-3 py-1 bg-teal-600 text-white"
-        onClick={() => navigate(`/admin-dashboard/employees/${Id}`)}
-      >
-        View
-      </button>
-      <button
-        className="px-3 py-1 bg-blue-600 text-white"
-        onClick={() => navigate(`/admin-dashboard/employees/edit/${Id}`)}
-      >
-        Edit
-      </button>
-     
-
-      <button
-        className="px-3 py-1 bg-yellow-600 text-white"
-        onClick={() => navigate(`/admin-dashboard/employees/salary/${Id}`)}
-      >
-        Salary
-      </button>
-      <button
-        className="px-3 py-1 bg-orange-600 text-white"
-        onClick={() => navigate(`/admin-dashboard/employees/leaves/${Id}`)}
-      >
-        Leave
-      </button>
-      <button
-        className="px-3 py-1 bg-red-600 text-white"
-        onClick={() => handleDelete(Id)}
-      >
-        Delete
-      </button>
-    </div>
-  );
 };

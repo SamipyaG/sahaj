@@ -59,14 +59,14 @@ const Sidebar = () => {
         </NavLink>
 
         <NavLink
-          to="/employee-dashboard/leave-handover"
+          to="/employee-dashboard/role-handover"
           className={({ isActive }) =>
             `${isActive ? "bg-blue-500 text-white" : "text-gray-300 hover:bg-blue-700"
             } flex items-center space-x-4 block py-3 px-4 rounded-lg mt-2 transition-all duration-300`
           }
         >
           <FaExchangeAlt className="text-xl" />
-          <span className="font-medium">Leave Handover</span>
+          <span className="font-medium">Role Handover</span>
         </NavLink>
 
         <NavLink

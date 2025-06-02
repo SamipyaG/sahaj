@@ -29,7 +29,7 @@ const Sidebar = () => {
     {
       key: 'leave-handover',
       icon: <FaExchangeAlt />,
-      label: 'Leave Handover',
+      label: 'Role Handover',
       path: '/leave-handover'
     },
     {

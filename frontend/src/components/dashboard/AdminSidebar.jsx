@@ -77,7 +77,7 @@ const AdminSidebar = () => {
           }
         >
           <FaExchangeAlt className="text-xl" />
-          <span className="font-medium">Leave Handover</span>
+          <span className="font-medium">Role Handover</span>
         </NavLink>
 
         <NavLink

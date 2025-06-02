@@ -3,11 +3,14 @@ import { Link } from "react-router-dom";
 import { EmployeeButtons } from "../../utils/EmployeeHelper";
 import DataTable from "react-data-table-component";
 import axios from "axios";
+import { FaSpinner } from "react-icons/fa";
 
 const List = () => {
   const [employees, setEmployees] = useState([]);
   const [empLoading, setEmpLoading] = useState(false);
   const [filteredEmployees, setFilteredEmployees] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     const fetchEmployees = async () => {
@@ -24,34 +27,35 @@ const List = () => {
         if (response.data.success) {
 
           let sno = 1;
-          const data = response.data.data.map((emp) => { 
+          const data = response.data.data.map((emp) => {
             console.log((emp.user?.profileImage || emp.user_id?.profileImage)
-            ? `http://localhost:5000/${emp.user?.profileImage || emp.user_id?.profileImage}`
-            : "/default-profile.png")
+              ? `http://localhost:5000/${emp.user?.profileImage || emp.user_id?.profileImage}`
+              : "/default-profile.png")
             return ({
-            _id: emp._id,
-            sno: sno++,
-            department_name: emp.department_name || emp.department_id?.department_name || "N/A",
-            name: emp.employee_name || emp.user?.name || emp.user_id?.name || "Unknown",
-            dob: emp.date_of_birth ? new Date(emp.date_of_birth).toLocaleDateString() : "N/A",
-            profileImage: (
-              <img
-                width={40}
-                className="rounded-full" crossorigin="anonymous"
-                src={
-                  (emp.user?.profileImage || emp.user_id?.profileImage)
-                    ? `http://localhost:5000/${emp.user?.profileImage || emp.user_id?.profileImage}`
-                    : "/default-profile.png"
-                }
-                alt={`${emp.employee_name}'s Profile`}
-                onError={(e) => {
-                  e.target.src = "/default-profile.png";
-                }}
-              />
-            ),
-            action: <EmployeeButtons Id={emp._id} />,
-            
-          })});
+              _id: emp._id,
+              sno: sno++,
+              department_name: emp.department_name || emp.department_id?.department_name || "N/A",
+              name: emp.employee_name || emp.user?.name || emp.user_id?.name || "Unknown",
+              dob: emp.date_of_birth ? new Date(emp.date_of_birth).toLocaleDateString() : "N/A",
+              profileImage: (
+                <img
+                  width={40}
+                  className="rounded-full" crossorigin="anonymous"
+                  src={
+                    (emp.user?.profileImage || emp.user_id?.profileImage)
+                      ? `http://localhost:5000/${emp.user?.profileImage || emp.user_id?.profileImage}`
+                      : "/default-profile.png"
+                  }
+                  alt={`${emp.employee_name}'s Profile`}
+                  onError={(e) => {
+                    e.target.src = "/default-profile.png";
+                  }}
+                />
+              ),
+              action: <EmployeeButtons Id={emp._id} />,
+
+            })
+          });
 
           setEmployees(data);
           setFilteredEmployees(data);
@@ -79,8 +83,34 @@ const List = () => {
     setFilteredEmployees(records);
   };
 
-  if (empLoading) {
-    return <div className="text-center p-4">Loading employees...</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <FaSpinner className="animate-spin text-4xl text-blue-600" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-red-600 text-lg mb-4">Unable to load employee list</p>
+          <p className="text-gray-600">Please check your connection and try again</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!employees.length) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-gray-600 text-lg mb-4">No employees found</p>
+          <p className="text-gray-500">Add new employees to get started</p>
+        </div>
+      </div>
+    );
   }
 
   return (

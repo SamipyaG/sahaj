@@ -2,7 +2,7 @@ import LeaveHandover from '../models/LeaveHandover.js';
 import Leave from '../models/Leave.js';
 import Employee from '../models/Employee.js';
 
-// Create a new leave handover
+// Create a new role handover
 const createLeaveHandover = async (req, res) => {
   try {
     const { leave_id, to_employee_id, handover_notes } = req.body;
@@ -120,20 +120,20 @@ const createLeaveHandover = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: "Leave handover request created successfully",
+      message: "Role handover request created successfully",
       handover: populatedHandover
     });
 
   } catch (error) {
-    console.error("Leave handover creation error:", error);
+    console.error("Role handover creation error:", error);
     return res.status(500).json({
       success: false,
-      error: "Server error while creating leave handover"
+      error: "Server error while creating role handover"
     });
   }
 };
 
-// Admin creates a leave handover
+// Admin creates a role handover
 const createAdminLeaveHandover = async (req, res) => {
   try {
     const { leave_id, from_employee_id, to_employee_id, handover_notes } = req.body;
@@ -182,15 +182,15 @@ const createAdminLeaveHandover = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: "Leave handover created successfully by admin",
+      message: "Role handover created successfully by admin",
       handover: newHandover
     });
 
   } catch (error) {
-    console.error("Admin leave handover creation error:", error);
+    console.error("Admin role handover creation error:", error);
     return res.status(500).json({
       success: false,
-      error: "Server error while creating leave handover"
+      error: "Server error while creating role handover"
     });
   }
 };

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import { useParams } from 'react-router-dom';
+import { FaSpinner } from 'react-icons/fa';
 
 const EmployeeList = () => {
   const [employee, setEmployee] = useState(null);
@@ -37,11 +38,7 @@ const EmployeeList = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center p-8 bg-white rounded-lg shadow-lg max-w-md w-full">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500 mx-auto mb-4"></div>
-          <h3 className="text-lg font-medium text-gray-700">Loading employee data...</h3>
-          <p className="text-gray-500 mt-1">Please wait while we fetch the details</p>
-        </div>
+        <FaSpinner className="animate-spin text-4xl text-blue-600" />
       </div>
     );
   }
@@ -49,19 +46,14 @@ const EmployeeList = () => {
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center p-8 bg-white rounded-lg shadow-lg max-w-md w-full">
-          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-            <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Employee</h3>
-          <p className="text-red-600 mb-4">{error}</p>
+        <div className="text-center">
+          <p className="text-red-600 text-lg mb-4">Unable to load employee details</p>
+          <p className="text-gray-600">Please check your connection and try again</p>
           <button
-            onClick={() => navigate(-1)}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            onClick={() => navigate('/admin-dashboard/employees')}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
           >
-            ← Back
+            Back to Employee List
           </button>
         </div>
       </div>
@@ -71,19 +63,14 @@ const EmployeeList = () => {
   if (!employee) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center p-8 bg-white rounded-lg shadow-lg max-w-md w-full">
-          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 mb-4">
-            <svg className="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Employee Not Found</h3>
-          <p className="text-gray-500 mb-4">No employee found with this ID</p>
+        <div className="text-center">
+          <p className="text-gray-600 text-lg mb-4">Employee not found</p>
+          <p className="text-gray-500">The employee you're looking for doesn't exist or has been removed</p>
           <button
-            onClick={() => navigate(-1)}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            onClick={() => navigate('/admin-dashboard/employees')}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
           >
-            ← Back
+            Back to Employee List
           </button>
         </div>
       </div>
