@@ -34,22 +34,109 @@ const calculateTax = (annualSalary) => {
   return tax;
 };
 
-// Track active cron job
-let activeCronJob = null;
+// Helper function to get week number
+const getWeekNumber = (date) => {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+  const yearStart = new Date(d.getFullYear(), 0, 1);
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+};
 
-// Safe salary generation wrapper
-const safeSalaryGeneration = async () => {
+// Generate weekly salaries
+export const generateWeeklySalaries = async () => {
   try {
-    console.log('Starting safe salary generation at:', new Date().toISOString());
-    await generateMonthlySalaries();
-    console.log('Safe salary generation completed successfully at:', new Date().toISOString());
+    console.log('Starting weekly salary generation...');
+    console.log('Current time:', new Date().toISOString());
+
+    const employees = await Employee.find({ active: true })
+      .populate('designation_id');
+
+    console.log(`Found ${employees.length} active employees`);
+
+    const currentDate = new Date();
+    const currentWeek = getWeekNumber(currentDate);
+    const currentYear = currentDate.getFullYear();
+
+    console.log(`Processing for week: ${currentWeek}, year: ${currentYear}`);
+
+    const usedSalaryIds = new Set(
+      await Salary.distinct('salary_id')
+    );
+
+    let processedCount = 0;
+    let skippedCount = 0;
+
+    const salaryPromises = employees.map(async (employee) => {
+      if (!employee.designation_id || new Date(employee.join_date) > currentDate) {
+        console.log(`Skipping employee ${employee._id}: No designation or joined after current date`);
+        skippedCount++;
+        return;
+      }
+
+      // Check for existing weekly salary
+      const existingSalary = await Salary.findOne({
+        employee_id: employee._id,
+        salary_type: 'weekly',
+        week_number: currentWeek,
+        pay_date: {
+          $gte: new Date(currentYear, 0, 1),
+          $lt: new Date(currentYear + 1, 0, 1)
+        }
+      });
+
+      if (!existingSalary) {
+        let salaryId;
+        do {
+          salaryId = Math.floor(100000 + Math.random() * 900000);
+        } while (usedSalaryIds.has(salaryId));
+        usedSalaryIds.add(salaryId);
+
+        // Calculate weekly basic salary (monthly salary / 4)
+        const weeklyBasicSalary = employee.designation_id.basic_salary / 4;
+
+        // Calculate weekly tax (monthly tax / 4)
+        const annualSalary = employee.designation_id.basic_salary * 12;
+        const monthlyTax = calculateTax(annualSalary) / 12;
+        const weeklyTax = monthlyTax / 4;
+
+        // Calculate weekly allowances and deductions
+        const weeklyAllowances = (employee.allowances || 0) / 4;
+        const weeklyDeductions = (employee.deductions || 0) / 4;
+
+        const newSalary = new Salary({
+          employee_id: employee._id,
+          designation_id: employee.designation_id._id,
+          salary_id: salaryId,
+          salary_type: 'weekly',
+          pay_date: new Date(currentDate),
+          week_number: currentWeek,
+          tax: weeklyTax,
+          allowances: weeklyAllowances,
+          deductions: weeklyDeductions,
+          basic_salary_at_pay: weeklyBasicSalary
+        });
+
+        await newSalary.save();
+        processedCount++;
+        console.log(`Generated weekly salary for employee ${employee._id} with salary ID: ${salaryId}`);
+      } else {
+        console.log(`Weekly salary already exists for employee ${employee._id} for week ${currentWeek}`);
+        skippedCount++;
+      }
+    });
+
+    await Promise.all(salaryPromises);
+    console.log('Weekly salary generation completed successfully');
+    console.log(`Processed: ${processedCount}, Skipped: ${skippedCount}, Total: ${employees.length}`);
   } catch (error) {
-    console.error('Error in salary generation:', error.message);
+    console.error('Error in weekly salary generation:', error);
     console.error('Error stack:', error.stack);
+    throw error;
   }
 };
 
-// Generate monthly salaries (without transactions for development)
+// Generate monthly salaries
 export const generateMonthlySalaries = async () => {
   try {
     console.log('Starting monthly salary generation...');
@@ -68,7 +155,6 @@ export const generateMonthlySalaries = async () => {
     const usedSalaryIds = new Set(
       await Salary.distinct('salary_id')
     );
-    console.log(`Found ${usedSalaryIds.size} existing salary IDs`);
 
     let processedCount = 0;
     let skippedCount = 0;
@@ -82,6 +168,7 @@ export const generateMonthlySalaries = async () => {
 
       const existingSalary = await Salary.findOne({
         employee_id: employee._id,
+        salary_type: 'monthly',
         pay_date: {
           $gte: new Date(currentYear, currentMonth, 1),
           $lt: new Date(currentYear, currentMonth + 1, 1)
@@ -117,8 +204,6 @@ export const generateMonthlySalaries = async () => {
         if (approvedExcessLeaves.length > 0) {
           const perDaySalary = employee.designation_id.basic_salary / 30;
           approvedExcessLeaves.forEach(leave => {
-            // Need to calculate the number of excess days within the current month
-            // This is a simplified calculation; a more accurate one would consider partial months
             const applicableExcessDays = Math.min(leave.excessDays, calculateLeaveDays(Math.max(startOfMonth, leave.startDate), Math.min(endOfMonth, leave.endDate)));
             totalExcessLeaveDeduction += applicableExcessDays * perDaySalary;
           });
@@ -128,19 +213,20 @@ export const generateMonthlySalaries = async () => {
           employee_id: employee._id,
           designation_id: employee.designation_id._id,
           salary_id: salaryId,
+          salary_type: 'monthly',
           pay_date: new Date(currentYear, currentMonth, 28),
           tax: monthlyTax,
           allowances: employee.allowances || 0,
-          deductions: (employee.deductions || 0) + totalExcessLeaveDeduction, // Add excess leave deduction to other deductions
-          excess_leave_deduction: totalExcessLeaveDeduction, // Store excess leave deduction separately
-          basic_salary_at_pay: employee.designation_id.basic_salary, // Store basic salary at the time of payment
+          deductions: (employee.deductions || 0) + totalExcessLeaveDeduction,
+          excess_leave_deduction: totalExcessLeaveDeduction,
+          basic_salary_at_pay: employee.designation_id.basic_salary
         });
 
         await newSalary.save();
         processedCount++;
-        console.log(`Generated salary for employee ${employee._id} with salary ID: ${salaryId}`);
+        console.log(`Generated monthly salary for employee ${employee._id} with salary ID: ${salaryId}`);
       } else {
-        console.log(`Salary already exists for employee ${employee._id} for this month`);
+        console.log(`Monthly salary already exists for employee ${employee._id} for this month`);
         skippedCount++;
       }
     });
@@ -155,47 +241,13 @@ export const generateMonthlySalaries = async () => {
   }
 };
 
-// Helper function to restart cron job
-const restartCronJob = async (config) => {
-  if (activeCronJob) {
-    activeCronJob.stop();
-    console.log('Stopped previous cron job at:', new Date().toISOString());
-  }
-
-  if (config.schedule_type === 'monthly') {
-    const cronExpression = `0 9 ${config.day_of_month} * *`;
-    console.log(`Setting up monthly cron job with expression: ${cronExpression}`);
-    activeCronJob = cron.schedule(cronExpression, safeSalaryGeneration, {
-      timezone: "Asia/Kolkata"
-    });
-    console.log(`Salary processing scheduled for day ${config.day_of_month} at 9 AM IST`);
-  } else {
-    const cronExpression = `*/${config.custom_minutes} * * * *`;
-    console.log(`Setting up test mode cron job with expression: ${cronExpression}`);
-    activeCronJob = cron.schedule(cronExpression, safeSalaryGeneration, {
-      timezone: "Asia/Kolkata"
-    });
-    console.log(`Salary processing every ${config.custom_minutes} minutes (TEST MODE)`);
-  }
-};
-
-export const initSalaryCronJob = () => {
-  console.log('Initializing salary cron job at:', new Date().toISOString());
-  cron.schedule('0 9 28 * *', generateMonthlySalaries, {
-    scheduled: true,
-    timezone: "Asia/Kolkata"
-  });
-  console.log('Salary cron job initialized for 28th of every month at 9 AM IST');
-};
-
 // Get salary payment status
 export const getPaidStatus = async (req, res) => {
   try {
     const now = new Date();
     const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1; // 1-12
+    const currentMonth = now.getMonth() + 1;
 
-    // Set the date 10 months ago (11 months total including current)
     const elevenMonthsAgo = new Date(now);
     elevenMonthsAgo.setMonth(elevenMonthsAgo.getMonth() - 10);
     elevenMonthsAgo.setDate(1);
@@ -276,7 +328,6 @@ export const getEmployeeSalaries = async (req, res) => {
     const { id } = req.params;
     const { page = 1, limit = 10 } = req.query;
 
-    // First find the employee
     let employee = await Employee.findOne({
       $or: [
         { _id: mongoose.isValidObjectId(id) ? id : null },
@@ -292,14 +343,12 @@ export const getEmployeeSalaries = async (req, res) => {
       });
     }
 
-    // Find salaries with proper population
     const salaries = await Salary.find({ employee_id: employee._id })
       .populate('designation_id', 'title basic_salary')
       .sort({ pay_date: -1 })
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
 
-    // Get total count for pagination
     const total = await Salary.countDocuments({ employee_id: employee._id });
 
     res.status(200).json({

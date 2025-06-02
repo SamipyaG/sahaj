@@ -28,6 +28,12 @@ const salarySchema = new Schema(
         message: "Pay date cannot be in the future"
       }
     },
+    salary_type: {
+      type: String,
+      enum: ['weekly', 'monthly'],
+      required: true,
+      default: 'monthly'
+    },
     tax: {
       type: Number,
       required: true,
@@ -43,8 +49,26 @@ const salarySchema = new Schema(
       default: 0,
       min: 0
     },
-    excess_leave_deduction: { type: Number, default: 0, min: 0 },
-    basic_salary_at_pay: { type: Number },
+    excess_leave_deduction: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    basic_salary_at_pay: {
+      type: Number,
+      required: true
+    },
+    week_number: {
+      type: Number,
+      min: 1,
+      max: 53,
+      validate: {
+        validator: function (v) {
+          return this.salary_type === 'weekly' ? v >= 1 && v <= 53 : true;
+        },
+        message: 'Week number must be between 1 and 53 for weekly salaries'
+      }
+    }
   },
   {
     timestamps: true,
@@ -53,15 +77,24 @@ const salarySchema = new Schema(
   }
 );
 
-// Virtual field for net_salary with safe access
-salarySchema.virtual('net_salary').get(function () {
-  const basic = this.designation_id?.basic_salary || 0;
-  return basic + (this.allowances || 0) - (this.tax || 0) - (this.deductions || 0);
+// Virtual field for gross_salary
+salarySchema.virtual('gross_salary').get(function () {
+  return this.basic_salary_at_pay +
+    (this.allowances || 0);
 });
 
-// Performance indexes (removed duplicate salary_id index)
+// Virtual field for net_salary with improved calculation
+salarySchema.virtual('net_salary').get(function () {
+  return this.gross_salary -
+    (this.tax || 0) -
+    (this.deductions || 0) -
+    (this.excess_leave_deduction || 0);
+});
+
+// Performance indexes
 salarySchema.index({ employee_id: 1 });
 salarySchema.index({ pay_date: -1 });
+salarySchema.index({ salary_type: 1, week_number: 1 });
 
 const Salary = mongoose.model('Salary', salarySchema);
 export default Salary;

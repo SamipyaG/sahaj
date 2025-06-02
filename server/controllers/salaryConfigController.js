@@ -1,6 +1,6 @@
 import SalaryConfig from "../models/salaryConfig.js";
 import cron from 'node-cron';
-import { generateMonthlySalaries } from './salaryController.js';
+import { generateMonthlySalaries, generateWeeklySalaries } from './salaryController.js';
 
 // Track active cron job to prevent duplicates
 let activeCronJob = null;
@@ -17,37 +17,48 @@ const restartCronJob = async (config) => {
   }
 
   // Validate config
-  if (!config || !config.schedule_type) {
-    throw new Error('Invalid configuration provided');
+  if (!config || !config.schedule_type || !config.auto_generate) {
+    console.log('Salary auto-generation is disabled or invalid configuration');
+    return;
   }
 
+  // Parse payment time
+  const [hours, minutes] = config.payment_time.split(':').map(Number);
+
   // Schedule based on config type
-  if (config.schedule_type === 'monthly') {
-    activeCronJob = cron.schedule(
-      `0 9 ${config.day_of_month} * *`,
-      () => {
-        console.log('Running scheduled salary generation');
-        generateMonthlySalaries().catch(console.error);
-      },
-      {
-        timezone: "Asia/Kolkata",
-        scheduled: true
-      }
-    );
-    console.log(`Salary processing scheduled for day ${config.day_of_month} at 9 AM IST`);
-  } else {
-    activeCronJob = cron.schedule(
-      `*/${config.custom_minutes} * * * *`,
-      () => {
-        console.log('Running test-mode salary generation');
-        generateMonthlySalaries().catch(console.error);
-      },
-      {
-        timezone: "Asia/Kolkata",
-        scheduled: true
-      }
-    );
-    console.log(`Salary processing every ${config.custom_minutes} minutes (TEST MODE)`);
+  switch (config.schedule_type) {
+    case 'monthly':
+      activeCronJob = cron.schedule(
+        `${minutes} ${hours} ${config.payment_day} * *`,
+        () => {
+          console.log('Running scheduled monthly salary generation');
+          generateMonthlySalaries().catch(console.error);
+        },
+        {
+          timezone: config.timezone,
+          scheduled: true
+        }
+      );
+      console.log(`Monthly salary processing scheduled for ${config.payment_day_name} at ${config.payment_time} ${config.timezone}`);
+      break;
+
+    case 'weekly':
+      activeCronJob = cron.schedule(
+        `${minutes} ${hours} * * ${config.payment_day}`,
+        () => {
+          console.log('Running scheduled weekly salary generation');
+          generateWeeklySalaries().catch(console.error);
+        },
+        {
+          timezone: config.timezone,
+          scheduled: true
+        }
+      );
+      console.log(`Weekly salary processing scheduled for ${config.payment_day_name} at ${config.payment_time} ${config.timezone}`);
+      break;
+
+    default:
+      throw new Error('Invalid schedule type');
   }
 };
 
@@ -59,18 +70,22 @@ const restartCronJob = async (config) => {
 const validateConfig = (config) => {
   const errors = [];
 
-  if (!['monthly', 'custom'].includes(config.schedule_type)) {
-    errors.push('Invalid schedule type');
+  if (!['weekly', 'monthly'].includes(config.schedule_type)) {
+    errors.push('Invalid schedule type. Must be either weekly or monthly');
   }
 
   if (config.schedule_type === 'monthly' &&
-    (config.day_of_month < 1 || config.day_of_month > 28)) {
-    errors.push('Day of month must be between 1-28');
+    (config.payment_day < 1 || config.payment_day > 28)) {
+    errors.push('Monthly payment day must be between 1-28');
   }
 
-  if (config.schedule_type === 'custom' &&
-    (config.custom_minutes < 1 || config.custom_minutes > 1440)) {
-    errors.push('Custom interval must be 1-1440 minutes');
+  if (config.schedule_type === 'weekly' &&
+    (config.payment_day < 0 || config.payment_day > 6)) {
+    errors.push('Weekly payment day must be between 0-6 (Sunday-Saturday)');
+  }
+
+  if (!/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(config.payment_time)) {
+    errors.push('Payment time must be in HH:mm format (24-hour)');
   }
 
   return errors;
@@ -87,8 +102,12 @@ export const getSalaryConfig = async (req, res) => {
     if (!config) {
       const defaultConfig = {
         schedule_type: 'monthly',
-        day_of_month: 28,
-        custom_minutes: 5
+        payment_day: 28,
+        payment_time: '09:00',
+        timezone: 'Asia/Kolkata',
+        auto_generate: true,
+        notify_employees: true,
+        notify_admin: true
       };
 
       // Create and save default config
@@ -104,8 +123,13 @@ export const getSalaryConfig = async (req, res) => {
     // Prepare response data
     const responseData = {
       schedule_type: config.schedule_type,
-      day_of_month: config.day_of_month,
-      custom_minutes: config.custom_minutes,
+      payment_day: config.payment_day,
+      payment_day_name: config.payment_day_name,
+      payment_time: config.payment_time,
+      timezone: config.timezone,
+      auto_generate: config.auto_generate,
+      notify_employees: config.notify_employees,
+      notify_admin: config.notify_admin,
       last_updated: config.updatedAt
     };
 
@@ -164,8 +188,13 @@ export const updateSalaryConfig = async (req, res) => {
     // Prepare response
     const responseData = {
       schedule_type: config.schedule_type,
-      day_of_month: config.day_of_month,
-      custom_minutes: config.custom_minutes,
+      payment_day: config.payment_day,
+      payment_day_name: config.payment_day_name,
+      payment_time: config.payment_time,
+      timezone: config.timezone,
+      auto_generate: config.auto_generate,
+      notify_employees: config.notify_employees,
+      notify_admin: config.notify_admin,
       last_updated: config.updatedAt
     };
 
@@ -195,8 +224,12 @@ export const initSalaryCron = async () => {
       // Create default config if none exists
       config = await SalaryConfig.create({
         schedule_type: 'monthly',
-        day_of_month: 28,
-        custom_minutes: 5
+        payment_day: 28,
+        payment_time: '09:00',
+        timezone: 'Asia/Kolkata',
+        auto_generate: true,
+        notify_employees: true,
+        notify_admin: true
       });
     }
 
@@ -209,7 +242,10 @@ export const initSalaryCron = async () => {
     // Fallback to safe defaults
     await restartCronJob({
       schedule_type: 'monthly',
-      day_of_month: 28
+      payment_day: 28,
+      payment_time: '09:00',
+      timezone: 'Asia/Kolkata',
+      auto_generate: true
     });
   }
 };
