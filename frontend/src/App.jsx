@@ -9,7 +9,7 @@ import DepartmentList from "./components/department/DepartmentList";
 import AddDepartment from "./components/department/AddDepartment";
 import EditDepartment from "./components/department/EditDepartment";
 import List from "./components/employee/List";
-import Add from "./components/employee/Add";
+import AddEmployee from "./components/employee/AddEmployee";
 import View from "./components/employee/View";
 import Edit from "./components/employee/Edit";
 import AutomaticSalary from "./components/salary/OverallSalaryStatus";
@@ -64,7 +64,7 @@ function App() {
 
         {/* Employee Management Routes (Admin) */}
         <Route path="employees" element={<List />} />
-        <Route path="add-employee" element={<Add />} />
+        <Route path="add-employee" element={<AddEmployee />} />
         <Route path="employees/:id" element={<View />} />
         <Route path="employees/edit/:id" element={<Edit />} />
         <Route path="employees/salary/:id" element={<ViewSalary />} />

@@ -3,7 +3,8 @@ import {
   getPaidStatus,
   getEmployeeSalaries,
   testSalaryGeneration,
-  getMonthlySalaryDetails
+  getMonthlySalaryDetails,
+  addSalaryRecord
 } from '../controllers/salaryController.js';
 import authMiddleware from '../middleware/authMiddlware.js';
 
@@ -34,5 +35,8 @@ router.get(
   '/:id',
   authMiddleware, getEmployeeSalaries
 );
+
+// Add salary record manually
+router.post('/add', authMiddleware, addSalaryRecord);
 
 export default router;

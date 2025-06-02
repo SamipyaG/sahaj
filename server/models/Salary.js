@@ -8,15 +8,20 @@ const salarySchema = new Schema(
       ref: 'Employee',
       required: true
     },
-    salary_id: {
-      type: Number,
-      required: true,
-      unique: true
-    },
     designation_id: {
       type: Schema.Types.ObjectId,
       ref: 'Designation',
       required: true
+    },
+    leave_id: {
+      type: Schema.Types.ObjectId,
+      ref: 'Leave'
+    },
+    salary_type: {
+      type: String,
+      enum: ['weekly', 'monthly'],
+      required: true,
+      default: 'monthly'
     },
     pay_date: {
       type: Date,
@@ -28,30 +33,9 @@ const salarySchema = new Schema(
         message: "Pay date cannot be in the future"
       }
     },
-    salary_type: {
-      type: String,
-      enum: ['weekly', 'monthly'],
-      required: true,
-      default: 'monthly'
-    },
     tax: {
       type: Number,
       required: true,
-      min: 0
-    },
-    allowances: {
-      type: Number,
-      default: 0,
-      min: 0
-    },
-    deductions: {
-      type: Number,
-      default: 0,
-      min: 0
-    },
-    excess_leave_deduction: {
-      type: Number,
-      default: 0,
       min: 0
     },
     week_number: {
@@ -73,17 +57,48 @@ const salarySchema = new Schema(
   }
 );
 
-// Virtual field for gross_salary
-salarySchema.virtual('gross_salary').get(function () {
-  return (this.designation_id?.basic_salary || 0) + (this.allowances || 0);
+// Virtual field for basic salary (from designation)
+salarySchema.virtual('basic_salary').get(function () {
+  if (!this.populated('designation_id')) {
+    return 0;
+  }
+  return this.salary_type === 'weekly'
+    ? this.designation_id.basic_salary / 4
+    : this.designation_id.basic_salary;
 });
 
-// Virtual field for net_salary with improved calculation
+// Virtual field for allowances (from designation)
+salarySchema.virtual('allowances').get(function () {
+  if (!this.populated('designation_id')) {
+    return 0;
+  }
+  return this.salary_type === 'weekly'
+    ? this.designation_id.allowance / 4
+    : this.designation_id.allowance;
+});
+
+// Virtual field for leave deduction
+salarySchema.virtual('leave_deduction').get(function () {
+  if (!this.populated('leave_id')) {
+    return 0;
+  }
+
+  const perDaySalary = this.basic_salary / (this.salary_type === 'weekly' ? 7 : 30);
+  if (this.leave_id.deductSalary || this.leave_id.noRestrictions) {
+    const days = Math.ceil((new Date(this.leave_id.endDate) - new Date(this.leave_id.startDate)) / (1000 * 60 * 60 * 24)) + 1;
+    return days * perDaySalary;
+  }
+  return 0;
+});
+
+// Virtual field for gross salary
+salarySchema.virtual('gross_salary').get(function () {
+  return this.basic_salary + this.allowances;
+});
+
+// Virtual field for net salary
 salarySchema.virtual('net_salary').get(function () {
-  return this.gross_salary -
-    (this.tax || 0) -
-    (this.deductions || 0) -
-    (this.excess_leave_deduction || 0);
+  return this.gross_salary - this.tax - this.leave_deduction;
 });
 
 // Performance indexes

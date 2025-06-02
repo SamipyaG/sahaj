@@ -16,9 +16,10 @@ const EmployeeSalaryView = () => {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         }
       });
+      console.log('Salary response:', response.data);
       setSalaries(response.data.success ? response.data.data.docs : []);
-      console.log(salaries)
     } catch (err) {
+      console.error('Error fetching salaries:', err);
       setError(err.response?.data?.error || 'Failed to fetch salary records');
     } finally {
       setLoading(false);
@@ -49,7 +50,7 @@ const EmployeeSalaryView = () => {
   return (
     <div className="overflow-x-auto p-5">
       <h2 className="text-2xl font-bold mb-4">Salary History</h2>
-      
+
       {salaries.length === 0 ? (
         <div className="text-center p-5">No salary records found</div>
       ) : (
@@ -57,9 +58,11 @@ const EmployeeSalaryView = () => {
           <thead>
             <tr className="bg-gray-100">
               <th className="py-2 px-4 border">S.N.</th>
-              <th className="py-2 px-4 border">Salary ID</th>
+              <th className="py-2 px-4 border">Type</th>
               <th className="py-2 px-4 border">Basic Salary</th>
+              <th className="py-2 px-4 border">Allowances</th>
               <th className="py-2 px-4 border">Tax</th>
+              <th className="py-2 px-4 border">Leave Deduction</th>
               <th className="py-2 px-4 border">Net Salary</th>
               <th className="py-2 px-4 border">Pay Date</th>
             </tr>
@@ -68,11 +71,13 @@ const EmployeeSalaryView = () => {
             {salaries.map((salary, index) => (
               <tr key={salary._id} className="hover:bg-gray-50">
                 <td className="py-2 px-4 border text-center">{index + 1}</td>
-                <td className="py-2 px-4 border text-center">{salary.salary_id}</td>
-                <td className="py-2 px-4 border text-right">₹{salary.designation_id.basic_salary.toFixed(2)}</td>
-                <td className="py-2 px-4 border text-right text-red-500">-₹{salary.tax.toFixed(2)}</td>
+                <td className="py-2 px-4 border text-center capitalize">{salary.salary_type}</td>
+                <td className="py-2 px-4 border text-right">₹{salary.basic_salary?.toFixed(2) || '0.00'}</td>
+                <td className="py-2 px-4 border text-right">₹{salary.allowances?.toFixed(2) || '0.00'}</td>
+                <td className="py-2 px-4 border text-right text-red-500">-₹{salary.tax?.toFixed(2) || '0.00'}</td>
+                <td className="py-2 px-4 border text-right text-red-500">-₹{salary.leave_deduction?.toFixed(2) || '0.00'}</td>
                 <td className="py-2 px-4 border text-right font-medium text-green-600">
-                  ₹{(salary.designation_id.basic_salary - salary.tax).toFixed(2)}
+                  ₹{salary.net_salary?.toFixed(2) || '0.00'}
                 </td>
                 <td className="py-2 px-4 border text-center">
                   {new Date(salary.pay_date).toLocaleDateString()}

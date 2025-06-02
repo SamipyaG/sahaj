@@ -71,10 +71,6 @@ export const generateWeeklySalaries = async () => {
 
     console.log(`Processing for week: ${currentWeek}, year: ${currentYear}`);
 
-    const usedSalaryIds = new Set(
-      await Salary.distinct('salary_id')
-    );
-
     let processedCount = 0;
     let skippedCount = 0;
 
@@ -97,28 +93,18 @@ export const generateWeeklySalaries = async () => {
       });
 
       if (!existingSalary) {
-        let salaryId;
-        do {
-          salaryId = Math.floor(100000 + Math.random() * 900000);
-        } while (usedSalaryIds.has(salaryId));
-        usedSalaryIds.add(salaryId);
-
-        // Calculate weekly basic salary and allowances from designation
-        const weeklyBasicSalary = employee.designation_id.basic_salary / 4;
-        const weeklyAllowances = employee.designation_id.allowance / 4;
-
         // Calculate weekly tax (monthly tax / 4)
         const annualSalary = employee.designation_id.basic_salary * 12;
         const monthlyTax = calculateTax(annualSalary) / 12;
         const weeklyTax = monthlyTax / 4;
 
-        // Calculate weekly deductions for leaves
+        // Find approved leaves for the week
         const startOfWeek = new Date(currentDate);
         startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
         const endOfWeek = new Date(startOfWeek);
         endOfWeek.setDate(endOfWeek.getDate() + 6);
 
-        const approvedLeaves = await Leave.find({
+        const approvedLeave = await Leave.findOne({
           employee_id: employee._id,
           status: "Approved",
           leave_setup_id: { $exists: true },
@@ -132,36 +118,19 @@ export const generateWeeklySalaries = async () => {
           select: 'leaveType deductSalary noRestrictions'
         });
 
-        let weeklyLeaveDeduction = 0;
-        if (approvedLeaves.length > 0) {
-          const perDaySalary = weeklyBasicSalary / 7; // Daily salary for the week
-          approvedLeaves.forEach(leave => {
-            if (leave.leave_setup_id.deductSalary || leave.leave_setup_id.noRestrictions) {
-              const applicableDays = calculateLeaveDays(
-                Math.max(startOfWeek, leave.startDate),
-                Math.min(endOfWeek, leave.endDate)
-              );
-              weeklyLeaveDeduction += applicableDays * perDaySalary;
-            }
-          });
-        }
-
         const newSalary = new Salary({
           employee_id: employee._id,
           designation_id: employee.designation_id._id,
-          salary_id: salaryId,
+          leave_id: approvedLeave?._id,
           salary_type: 'weekly',
           pay_date: new Date(currentDate),
           week_number: currentWeek,
-          tax: weeklyTax,
-          allowances: weeklyAllowances,
-          deductions: weeklyLeaveDeduction,
-          leave_deduction: weeklyLeaveDeduction
+          tax: weeklyTax
         });
 
         await newSalary.save();
         processedCount++;
-        console.log(`Generated weekly salary for employee ${employee._id} with salary ID: ${salaryId}`);
+        console.log(`Generated weekly salary for employee ${employee._id}`);
       } else {
         console.log(`Weekly salary already exists for employee ${employee._id} for week ${currentWeek}`);
         skippedCount++;
@@ -197,10 +166,6 @@ export const generateMonthlySalaries = async () => {
     const currentYear = currentDate.getFullYear();
     console.log(`Processing for month: ${currentMonth + 1}, year: ${currentYear}`);
 
-    const usedSalaryIds = new Set(
-      await Salary.distinct('salary_id')
-    );
-
     let processedCount = 0;
     let skippedCount = 0;
 
@@ -221,25 +186,15 @@ export const generateMonthlySalaries = async () => {
       });
 
       if (!existingSalary) {
-        let salaryId;
-        do {
-          salaryId = Math.floor(100000 + Math.random() * 900000);
-        } while (usedSalaryIds.has(salaryId));
-        usedSalaryIds.add(salaryId);
-
-        // Get basic salary and allowances from designation
-        const basicSalary = employee.designation_id.basic_salary;
-        const allowances = employee.designation_id.allowance;
-
         // Calculate monthly tax
-        const annualSalary = basicSalary * 12;
+        const annualSalary = employee.designation_id.basic_salary * 12;
         const monthlyTax = calculateTax(annualSalary) / 12;
 
-        // Calculate deductions for leaves in the current month
+        // Find approved leave for the month
         const startOfMonth = new Date(currentYear, currentMonth, 1);
         const endOfMonth = new Date(currentYear, currentMonth + 1, 0);
 
-        const approvedLeaves = await Leave.find({
+        const approvedLeave = await Leave.findOne({
           employee_id: employee._id,
           status: "Approved",
           leave_setup_id: { $exists: true },
@@ -253,35 +208,18 @@ export const generateMonthlySalaries = async () => {
           select: 'leaveType deductSalary noRestrictions'
         });
 
-        let totalLeaveDeduction = 0;
-        if (approvedLeaves.length > 0) {
-          const perDaySalary = basicSalary / 30; // Daily salary for the month
-          approvedLeaves.forEach(leave => {
-            if (leave.leave_setup_id.deductSalary || leave.leave_setup_id.noRestrictions) {
-              const applicableDays = calculateLeaveDays(
-                Math.max(startOfMonth, leave.startDate),
-                Math.min(endOfMonth, leave.endDate)
-              );
-              totalLeaveDeduction += applicableDays * perDaySalary;
-            }
-          });
-        }
-
         const newSalary = new Salary({
           employee_id: employee._id,
           designation_id: employee.designation_id._id,
-          salary_id: salaryId,
+          leave_id: approvedLeave?._id,
           salary_type: 'monthly',
           pay_date: new Date(currentYear, currentMonth, 28),
-          tax: monthlyTax,
-          allowances: allowances,
-          deductions: totalLeaveDeduction,
-          leave_deduction: totalLeaveDeduction
+          tax: monthlyTax
         });
 
         await newSalary.save();
         processedCount++;
-        console.log(`Generated monthly salary for employee ${employee._id} with salary ID: ${salaryId}`);
+        console.log(`Generated monthly salary for employee ${employee._id}`);
       } else {
         console.log(`Monthly salary already exists for employee ${employee._id} for this month`);
         skippedCount++;
@@ -402,6 +340,7 @@ export const getEmployeeSalaries = async (req, res) => {
 
     const salaries = await Salary.find({ employee_id: employee._id })
       .populate('designation_id', 'title basic_salary')
+      .populate('leave_id')
       .sort({ pay_date: -1 })
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
@@ -433,25 +372,6 @@ export const getEmployeeSalaries = async (req, res) => {
   }
 };
 
-// Test endpoint to manually trigger salary generation
-export const testSalaryGeneration = async (req, res) => {
-  try {
-    console.log('Manually triggering salary generation at:', new Date().toISOString());
-    await generateMonthlySalaries();
-    res.status(200).json({
-      success: true,
-      message: 'Salary generation completed successfully'
-    });
-  } catch (error) {
-    console.error('Error in test salary generation:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to generate salaries',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-};
-
 // Get monthly salary details
 export const getMonthlySalaryDetails = async (req, res) => {
   try {
@@ -474,6 +394,7 @@ export const getMonthlySalaryDetails = async (req, res) => {
         ]
       })
       .populate('designation_id', 'title basic_salary')
+      .populate('leave_id')
       .sort({ 'employee_id.user_id.name': 1 });
 
     res.status(200).json({
@@ -490,6 +411,25 @@ export const getMonthlySalaryDetails = async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch monthly salary details',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Test endpoint to manually trigger salary generation
+export const testSalaryGeneration = async (req, res) => {
+  try {
+    console.log('Manually triggering salary generation at:', new Date().toISOString());
+    await generateMonthlySalaries();
+    res.status(200).json({
+      success: true,
+      message: 'Salary generation completed successfully'
+    });
+  } catch (error) {
+    console.error('Error in test salary generation:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate salaries',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
@@ -538,5 +478,68 @@ export const initializeSalaryCronJobs = async () => {
   } catch (error) {
     console.error('Error initializing salary cron jobs:', error);
     throw error;
+  }
+};
+
+// Add a new salary record manually
+export const addSalaryRecord = async (req, res) => {
+  try {
+    const { employee_id, designation_id, salary_type, pay_date, tax, week_number } = req.body;
+
+    // Validate required fields
+    if (!employee_id || !designation_id || !salary_type || !pay_date || tax === undefined) {
+      return res.status(400).json({
+        success: false,
+        error: "Missing required fields"
+      });
+    }
+
+    // Check if employee exists
+    const employee = await Employee.findById(employee_id);
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        error: "Employee not found"
+      });
+    }
+
+    // Check if designation exists
+    const designation = await mongoose.model('Designation').findById(designation_id);
+    if (!designation) {
+      return res.status(404).json({
+        success: false,
+        error: "Designation not found"
+      });
+    }
+
+    // Create new salary record
+    const salary = new Salary({
+      employee_id,
+      designation_id,
+      salary_type,
+      pay_date: new Date(pay_date),
+      tax,
+      week_number: salary_type === 'weekly' ? week_number : undefined
+    });
+
+    await salary.save();
+
+    // Populate the saved salary record
+    const populatedSalary = await Salary.findById(salary._id)
+      .populate('employee_id', 'employee_name employee_id')
+      .populate('designation_id', 'title basic_salary allowance')
+      .populate('leave_id');
+
+    res.status(201).json({
+      success: true,
+      data: populatedSalary
+    });
+  } catch (error) {
+    console.error("Error adding salary record:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to add salary record",
+      details: error.message
+    });
   }
 };
