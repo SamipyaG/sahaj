@@ -140,7 +140,7 @@ const OverallSalaryStatus = () => {
                     <tr key={salary._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{index + 1}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {salary.employee_id.user_id.name}
+                        {salary.employee_id.employee_name}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {salary.employee_id.department_id.department_name}
@@ -149,24 +149,19 @@ const OverallSalaryStatus = () => {
                         {salary.designation_id.title}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ₹{salary.designation_id.basic_salary.toFixed(2)}
+                        ₹{salary.basic_salary?.toLocaleString() || 0}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600">
-                        -₹{salary.tax.toFixed(2)}
+                        -₹{salary.tax?.toLocaleString() || 0}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">
-                        +₹{salary.allowances.toFixed(2)}
+                        +₹{salary.allowances?.toLocaleString() || 0}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600">
-                        -₹{salary.deductions.toFixed(2)}
+                        -₹{salary.leave_deduction?.toLocaleString() || 0}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                        ₹{(
-                          salary.designation_id.basic_salary +
-                          salary.allowances -
-                          salary.tax -
-                          salary.deductions
-                        ).toFixed(2)}
+                        ₹{salary.gross_salary?.toLocaleString() || 0}
                       </td>
                     </tr>
                   ))}

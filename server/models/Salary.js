@@ -38,6 +38,11 @@ const salarySchema = new Schema(
       required: true,
       min: 0
     },
+    net_salary: {
+      type: Number,
+      required: true,
+      min: 0
+    },
     week_number: {
       type: Number,
       min: 1,
@@ -91,14 +96,24 @@ salarySchema.virtual('leave_deduction').get(function () {
   return 0;
 });
 
+// Pre-save middleware to calculate net salary
+salarySchema.pre('save', async function (next) {
+  try {
+    if (this.isModified('tax') || this.isModified('leave_id')) {
+      const basicSalary = this.basic_salary;
+      const allowances = this.allowances;
+      const leaveDeduction = this.leave_deduction;
+      this.net_salary = basicSalary + allowances - this.tax - leaveDeduction;
+    }
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Virtual field for gross salary
 salarySchema.virtual('gross_salary').get(function () {
   return this.basic_salary + this.allowances;
-});
-
-// Virtual field for net salary
-salarySchema.virtual('net_salary').get(function () {
-  return this.gross_salary - this.tax - this.leave_deduction;
 });
 
 // Performance indexes

@@ -118,6 +118,12 @@ export const generateWeeklySalaries = async () => {
           select: 'leaveType deductSalary noRestrictions'
         });
 
+        // Calculate weekly salary components
+        const weeklyBasicSalary = employee.designation_id.basic_salary / 4;
+        const weeklyAllowance = employee.designation_id.allowance / 4;
+        const leaveDeduction = approvedLeave ? (weeklyBasicSalary / 7) * calculateLeaveDays(approvedLeave.startDate, approvedLeave.endDate) : 0;
+        const netSalary = weeklyBasicSalary + weeklyAllowance - weeklyTax - leaveDeduction;
+
         const newSalary = new Salary({
           employee_id: employee._id,
           designation_id: employee.designation_id._id,
@@ -125,7 +131,8 @@ export const generateWeeklySalaries = async () => {
           salary_type: 'weekly',
           pay_date: new Date(currentDate),
           week_number: currentWeek,
-          tax: weeklyTax
+          tax: weeklyTax,
+          net_salary: netSalary
         });
 
         await newSalary.save();
@@ -208,13 +215,20 @@ export const generateMonthlySalaries = async () => {
           select: 'leaveType deductSalary noRestrictions'
         });
 
+        // Calculate monthly salary components
+        const monthlyBasicSalary = employee.designation_id.basic_salary;
+        const monthlyAllowance = employee.designation_id.allowance;
+        const leaveDeduction = approvedLeave ? (monthlyBasicSalary / 30) * calculateLeaveDays(approvedLeave.startDate, approvedLeave.endDate) : 0;
+        const netSalary = monthlyBasicSalary + monthlyAllowance - monthlyTax - leaveDeduction;
+
         const newSalary = new Salary({
           employee_id: employee._id,
           designation_id: employee.designation_id._id,
           leave_id: approvedLeave?._id,
           salary_type: 'monthly',
           pay_date: new Date(currentYear, currentMonth, 28),
-          tax: monthlyTax
+          tax: monthlyTax,
+          net_salary: netSalary
         });
 
         await newSalary.save();
@@ -339,7 +353,7 @@ export const getEmployeeSalaries = async (req, res) => {
     }
 
     const salaries = await Salary.find({ employee_id: employee._id })
-      .populate('designation_id', 'title basic_salary')
+      .populate('designation_id', 'title basic_salary allowance')
       .populate('leave_id')
       .sort({ pay_date: -1 })
       .skip((page - 1) * limit)
@@ -388,12 +402,13 @@ export const getMonthlySalaryDetails = async (req, res) => {
     })
       .populate({
         path: 'employee_id',
+        select: 'employee_name employee_id',
         populate: [
           { path: 'department_id', select: 'department_name' },
           { path: 'user_id', select: 'name' }
         ]
       })
-      .populate('designation_id', 'title basic_salary')
+      .populate('designation_id', 'title basic_salary allowance')
       .populate('leave_id')
       .sort({ 'employee_id.user_id.name': 1 });
 
@@ -484,7 +499,7 @@ export const initializeSalaryCronJobs = async () => {
 // Add a new salary record manually
 export const addSalaryRecord = async (req, res) => {
   try {
-    const { employee_id, designation_id, salary_type, pay_date, tax, week_number } = req.body;
+    const { employee_id, designation_id, salary_type, pay_date, tax } = req.body;
 
     // Validate required fields
     if (!employee_id || !designation_id || !salary_type || !pay_date || tax === undefined) {
@@ -495,7 +510,7 @@ export const addSalaryRecord = async (req, res) => {
     }
 
     // Check if employee exists
-    const employee = await Employee.findById(employee_id);
+    const employee = await Employee.findById(employee_id).populate('designation_id');
     if (!employee) {
       return res.status(404).json({
         success: false,
@@ -503,14 +518,16 @@ export const addSalaryRecord = async (req, res) => {
       });
     }
 
-    // Check if designation exists
-    const designation = await mongoose.model('Designation').findById(designation_id);
-    if (!designation) {
-      return res.status(404).json({
-        success: false,
-        error: "Designation not found"
-      });
-    }
+    // Calculate salary components
+    const basicSalary = salary_type === 'weekly'
+      ? employee.designation_id.basic_salary / 4
+      : employee.designation_id.basic_salary;
+
+    const allowance = salary_type === 'weekly'
+      ? employee.designation_id.allowance / 4
+      : employee.designation_id.allowance;
+
+    const netSalary = basicSalary + allowance - tax;
 
     // Create new salary record
     const salary = new Salary({
@@ -519,7 +536,7 @@ export const addSalaryRecord = async (req, res) => {
       salary_type,
       pay_date: new Date(pay_date),
       tax,
-      week_number: salary_type === 'weekly' ? week_number : undefined
+      net_salary: netSalary
     });
 
     await salary.save();
