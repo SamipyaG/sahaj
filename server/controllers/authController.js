@@ -1,7 +1,6 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import bcrypt from "bcrypt";
-import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 
 export const login = async (req, res) => {
