@@ -7,27 +7,39 @@ const AddLeaveSetup = () => {
         leaveType: '',
         maxDays: '',
         description: '',
+        deductSalary: false,
+        noRestrictions: false
     });
 
     const navigate = useNavigate();
 
     const handleChange = (e) => {
-        const { name, value } = e.target;
-        setLeaveSetup({ ...leaveSetup, [name]: value });
-        console.log(leaveSetup,"From UI");
+        const { name, value, type, checked } = e.target;
+        setLeaveSetup({
+            ...leaveSetup,
+            [name]: type === 'checkbox' ? checked : value
+        });
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!leaveSetup.leaveType || !leaveSetup.maxDays) {
-            alert("Leave Type and Max Days are required.");
+        if (!leaveSetup.leaveType) {
+            alert("Leave Type is required.");
+            return;
+        }
+
+        // If noRestrictions is true, set maxDays to 0
+        if (leaveSetup.noRestrictions) {
+            leaveSetup.maxDays = 0;
+        } else if (!leaveSetup.maxDays) {
+            alert("Max Days is required for restricted leave types.");
             return;
         }
 
         try {
             const response = await axios.post(
-                `http://localhost:5000/api/leave-setup/add`, 
+                `http://localhost:5000/api/leave-setup/add`,
                 leaveSetup,
                 {
                     headers: {
@@ -73,8 +85,14 @@ const AddLeaveSetup = () => {
                         onChange={handleChange}
                         placeholder="Max Days"
                         className="mt-1 w-full p-2 border border-gray-300 rounded-md"
-                        required
+                        disabled={leaveSetup.noRestrictions}
+                        required={!leaveSetup.noRestrictions}
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                        {leaveSetup.noRestrictions ?
+                            "Max days is not required for unrestricted leave types" :
+                            "Enter 0 for unlimited days"}
+                    </p>
                 </div>
 
                 <div className="mt-3">
@@ -86,6 +104,34 @@ const AddLeaveSetup = () => {
                         placeholder="Description"
                         className="mt-1 w-full p-2 border border-gray-300 rounded-md"
                     />
+                </div>
+
+                <div className="mt-4 space-y-3">
+                    <div className="flex items-center">
+                        <input
+                            type="checkbox"
+                            name="noRestrictions"
+                            checked={leaveSetup.noRestrictions}
+                            onChange={handleChange}
+                            className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded"
+                        />
+                        <label className="ml-2 block text-sm text-gray-700">
+                            No Restrictions (Unlimited Days)
+                        </label>
+                    </div>
+
+                    <div className="flex items-center">
+                        <input
+                            type="checkbox"
+                            name="deductSalary"
+                            checked={leaveSetup.deductSalary}
+                            onChange={handleChange}
+                            className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded"
+                        />
+                        <label className="ml-2 block text-sm text-gray-700">
+                            Deduct Salary
+                        </label>
+                    </div>
                 </div>
 
                 <button

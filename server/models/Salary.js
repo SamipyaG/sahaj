@@ -54,10 +54,6 @@ const salarySchema = new Schema(
       default: 0,
       min: 0
     },
-    basic_salary_at_pay: {
-      type: Number,
-      required: true
-    },
     week_number: {
       type: Number,
       min: 1,
@@ -79,8 +75,7 @@ const salarySchema = new Schema(
 
 // Virtual field for gross_salary
 salarySchema.virtual('gross_salary').get(function () {
-  return this.basic_salary_at_pay +
-    (this.allowances || 0);
+  return (this.designation_id?.basic_salary || 0) + (this.allowances || 0);
 });
 
 // Virtual field for net_salary with improved calculation

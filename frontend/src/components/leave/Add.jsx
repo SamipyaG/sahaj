@@ -49,7 +49,9 @@ const AddLeave = () => {
           type: leaveSetup.leaveType,
           id: leaveSetup._id,
           maxDays: leaveSetup.maxDays,
-          description: leaveSetup.description || ""
+          description: leaveSetup.description || "",
+          deductSalary: leaveSetup.deductSalary,
+          noRestrictions: leaveSetup.noRestrictions
         }));
 
         setLeaveTypes(formattedLeaveTypes);
@@ -125,7 +127,7 @@ const AddLeave = () => {
       setError("Please provide a reason for leave");
       return false;
     }
-    if (selectedLeaveType && numOfDays > selectedLeaveType.maxDays) {
+    if (selectedLeaveType && !selectedLeaveType.noRestrictions && numOfDays > selectedLeaveType.maxDays) {
       setError(`You are requesting ${numOfDays - selectedLeaveType.maxDays} days more than your allowed balance (${selectedLeaveType.maxDays} days)`);
       return false;
     }
@@ -211,14 +213,28 @@ const AddLeave = () => {
               <option value="">-- Select Leave Type --</option>
               {leaveTypes.map((type) => (
                 <option key={type.id} value={type.id}>
-                  {type.type} (max {type.maxDays} days)
+                  {type.type} {type.noRestrictions ? '(Unrestricted)' : `(max ${type.maxDays} days)`}
                 </option>
               ))}
             </select>
-            {selectedLeaveType && selectedLeaveType.description && (
-              <p className="mt-2 text-sm text-gray-500">
-                {selectedLeaveType.description}
-              </p>
+            {selectedLeaveType && (
+              <div className="mt-2 space-y-1">
+                {selectedLeaveType.description && (
+                  <p className="text-sm text-gray-500">
+                    {selectedLeaveType.description}
+                  </p>
+                )}
+                {selectedLeaveType.noRestrictions && (
+                  <p className="text-sm text-blue-600">
+                    This leave type has no restrictions on the number of days.
+                  </p>
+                )}
+                {selectedLeaveType.deductSalary && (
+                  <p className="text-sm text-amber-600">
+                    This leave type will result in salary deduction.
+                  </p>
+                )}
+              </div>
             )}
           </div>
 
@@ -233,8 +249,7 @@ const AddLeave = () => {
                 name="startDate"
                 value={formData.startDate}
                 onChange={handleChange}
-                className={`w-full p-3 border rounded-md focus:ring-teal-500 focus:border-teal-500 ${dateValidationErrors.startDate ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                className={`w-full p-3 border rounded-md focus:ring-teal-500 focus:border-teal-500 ${dateValidationErrors.startDate ? 'border-red-500' : 'border-gray-300'}`}
                 required
                 min={dayjs().format('YYYY-MM-DD')}
                 disabled={isSubmitting}
@@ -252,8 +267,7 @@ const AddLeave = () => {
                 name="endDate"
                 value={formData.endDate}
                 onChange={handleChange}
-                className={`w-full p-3 border rounded-md focus:ring-teal-500 focus:border-teal-500 ${dateValidationErrors.endDate ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                className={`w-full p-3 border rounded-md focus:ring-teal-500 focus:border-teal-500 ${dateValidationErrors.endDate ? 'border-red-500' : 'border-gray-300'}`}
                 required
                 min={formData.startDate || dayjs().format('YYYY-MM-DD')}
                 disabled={isSubmitting}
@@ -264,68 +278,52 @@ const AddLeave = () => {
             </div>
           </div>
 
-          {/* Days Calculation */}
-          {numOfDays > 0 && (
-            <div className={`p-3 rounded-md ${selectedLeaveType && numOfDays > selectedLeaveType.maxDays
-              ? 'bg-yellow-50 text-yellow-800'
-              : 'bg-blue-50 text-blue-800'
-              }`}>
-              <p className="text-sm">
-                Total Leave Days: <span className="font-bold">{numOfDays}</span>
-                {selectedLeaveType && (
-                  <span className="ml-2">
-                    (Max allowed: {selectedLeaveType.maxDays} days)
-                  </span>
-                )}
+          {/* Number of Days */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Number of Days
+            </label>
+            <input
+              type="text"
+              value={numOfDays}
+              readOnly
+              className="w-full p-3 border border-gray-300 rounded-md bg-gray-50"
+            />
+            {selectedLeaveType && !selectedLeaveType.noRestrictions && (
+              <p className="mt-1 text-sm text-gray-500">
+                Available balance: {selectedLeaveType.maxDays} days
               </p>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Reason */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Reason *
+              Reason for Leave *
             </label>
             <textarea
               name="reason"
               value={formData.reason}
               onChange={handleChange}
-              placeholder="Explain the purpose of your leave..."
+              rows="4"
               className="w-full p-3 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
-              rows={4}
               required
               disabled={isSubmitting}
+              placeholder="Please provide a detailed reason for your leave request"
             />
           </div>
 
           {/* Submit Button */}
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="mr-4 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-              disabled={isSubmitting}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className={`px-6 py-2 rounded-md text-white ${isSubmitting
-                ? 'bg-teal-300 cursor-not-allowed'
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className={`w-full py-3 px-4 rounded-md text-white font-medium ${isSubmitting
+                ? 'bg-gray-400 cursor-not-allowed'
                 : 'bg-teal-600 hover:bg-teal-700'
-                }`}
-            >
-              {isSubmitting ? (
-                <>
-                  <span className="inline-block animate-spin mr-2">↻</span>
-                  Submitting...
-                </>
-              ) : (
-                'Submit Request'
-              )}
-            </button>
-          </div>
+              }`}
+          >
+            {isSubmitting ? 'Submitting...' : 'Submit Leave Request'}
+          </button>
         </form>
       )}
     </div>

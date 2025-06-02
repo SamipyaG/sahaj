@@ -34,6 +34,14 @@ const calculateTax = (annualSalary) => {
   return tax;
 };
 
+// Helper function to calculate leave days
+const calculateLeaveDays = (startDate, endDate) => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const timeDiff = end - start;
+  return Math.ceil(timeDiff / (1000 * 60 * 60 * 24)) + 1;
+};
+
 // Helper function to get week number
 const getWeekNumber = (date) => {
   const d = new Date(date);
@@ -50,7 +58,10 @@ export const generateWeeklySalaries = async () => {
     console.log('Current time:', new Date().toISOString());
 
     const employees = await Employee.find({ active: true })
-      .populate('designation_id');
+      .populate({
+        path: 'designation_id',
+        select: 'title basic_salary allowance'
+      });
 
     console.log(`Found ${employees.length} active employees`);
 
@@ -92,17 +103,48 @@ export const generateWeeklySalaries = async () => {
         } while (usedSalaryIds.has(salaryId));
         usedSalaryIds.add(salaryId);
 
-        // Calculate weekly basic salary (monthly salary / 4)
+        // Calculate weekly basic salary and allowances from designation
         const weeklyBasicSalary = employee.designation_id.basic_salary / 4;
+        const weeklyAllowances = employee.designation_id.allowance / 4;
 
         // Calculate weekly tax (monthly tax / 4)
         const annualSalary = employee.designation_id.basic_salary * 12;
         const monthlyTax = calculateTax(annualSalary) / 12;
         const weeklyTax = monthlyTax / 4;
 
-        // Calculate weekly allowances and deductions
-        const weeklyAllowances = (employee.allowances || 0) / 4;
-        const weeklyDeductions = (employee.deductions || 0) / 4;
+        // Calculate weekly deductions for leaves
+        const startOfWeek = new Date(currentDate);
+        startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(endOfWeek.getDate() + 6);
+
+        const approvedLeaves = await Leave.find({
+          employee_id: employee._id,
+          status: "Approved",
+          leave_setup_id: { $exists: true },
+          $or: [
+            { startDate: { $gte: startOfWeek, $lte: endOfWeek } },
+            { endDate: { $gte: startOfWeek, $lte: endOfWeek } },
+            { $and: [{ startDate: { $lte: startOfWeek } }, { endDate: { $gte: endOfWeek } }] }
+          ]
+        }).populate({
+          path: 'leave_setup_id',
+          select: 'leaveType deductSalary noRestrictions'
+        });
+
+        let weeklyLeaveDeduction = 0;
+        if (approvedLeaves.length > 0) {
+          const perDaySalary = weeklyBasicSalary / 7; // Daily salary for the week
+          approvedLeaves.forEach(leave => {
+            if (leave.leave_setup_id.deductSalary || leave.leave_setup_id.noRestrictions) {
+              const applicableDays = calculateLeaveDays(
+                Math.max(startOfWeek, leave.startDate),
+                Math.min(endOfWeek, leave.endDate)
+              );
+              weeklyLeaveDeduction += applicableDays * perDaySalary;
+            }
+          });
+        }
 
         const newSalary = new Salary({
           employee_id: employee._id,
@@ -113,8 +155,8 @@ export const generateWeeklySalaries = async () => {
           week_number: currentWeek,
           tax: weeklyTax,
           allowances: weeklyAllowances,
-          deductions: weeklyDeductions,
-          basic_salary_at_pay: weeklyBasicSalary
+          deductions: weeklyLeaveDeduction,
+          leave_deduction: weeklyLeaveDeduction
         });
 
         await newSalary.save();
@@ -143,7 +185,10 @@ export const generateMonthlySalaries = async () => {
     console.log('Current time:', new Date().toISOString());
 
     const employees = await Employee.find({ active: true })
-      .populate('designation_id');
+      .populate({
+        path: 'designation_id',
+        select: 'title basic_salary allowance'
+      });
 
     console.log(`Found ${employees.length} active employees`);
 
@@ -182,30 +227,43 @@ export const generateMonthlySalaries = async () => {
         } while (usedSalaryIds.has(salaryId));
         usedSalaryIds.add(salaryId);
 
-        const annualSalary = employee.designation_id.basic_salary * 12;
+        // Get basic salary and allowances from designation
+        const basicSalary = employee.designation_id.basic_salary;
+        const allowances = employee.designation_id.allowance;
+
+        // Calculate monthly tax
+        const annualSalary = basicSalary * 12;
         const monthlyTax = calculateTax(annualSalary) / 12;
 
-        // Calculate deductions for excess leave days in the current month
+        // Calculate deductions for leaves in the current month
         const startOfMonth = new Date(currentYear, currentMonth, 1);
         const endOfMonth = new Date(currentYear, currentMonth + 1, 0);
 
-        const approvedExcessLeaves = await Leave.find({
+        const approvedLeaves = await Leave.find({
           employee_id: employee._id,
           status: "Approved",
-          excessDays: { $gt: 0 },
+          leave_setup_id: { $exists: true },
           $or: [
             { startDate: { $gte: startOfMonth, $lte: endOfMonth } },
             { endDate: { $gte: startOfMonth, $lte: endOfMonth } },
             { $and: [{ startDate: { $lte: startOfMonth } }, { endDate: { $gte: endOfMonth } }] }
           ]
+        }).populate({
+          path: 'leave_setup_id',
+          select: 'leaveType deductSalary noRestrictions'
         });
 
-        let totalExcessLeaveDeduction = 0;
-        if (approvedExcessLeaves.length > 0) {
-          const perDaySalary = employee.designation_id.basic_salary / 30;
-          approvedExcessLeaves.forEach(leave => {
-            const applicableExcessDays = Math.min(leave.excessDays, calculateLeaveDays(Math.max(startOfMonth, leave.startDate), Math.min(endOfMonth, leave.endDate)));
-            totalExcessLeaveDeduction += applicableExcessDays * perDaySalary;
+        let totalLeaveDeduction = 0;
+        if (approvedLeaves.length > 0) {
+          const perDaySalary = basicSalary / 30; // Daily salary for the month
+          approvedLeaves.forEach(leave => {
+            if (leave.leave_setup_id.deductSalary || leave.leave_setup_id.noRestrictions) {
+              const applicableDays = calculateLeaveDays(
+                Math.max(startOfMonth, leave.startDate),
+                Math.min(endOfMonth, leave.endDate)
+              );
+              totalLeaveDeduction += applicableDays * perDaySalary;
+            }
           });
         }
 
@@ -216,10 +274,9 @@ export const generateMonthlySalaries = async () => {
           salary_type: 'monthly',
           pay_date: new Date(currentYear, currentMonth, 28),
           tax: monthlyTax,
-          allowances: employee.allowances || 0,
-          deductions: (employee.deductions || 0) + totalExcessLeaveDeduction,
-          excess_leave_deduction: totalExcessLeaveDeduction,
-          basic_salary_at_pay: employee.designation_id.basic_salary
+          allowances: allowances,
+          deductions: totalLeaveDeduction,
+          leave_deduction: totalLeaveDeduction
         });
 
         await newSalary.save();
@@ -435,5 +492,51 @@ export const getMonthlySalaryDetails = async (req, res) => {
       error: 'Failed to fetch monthly salary details',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
+  }
+};
+
+// Initialize salary generation cron jobs
+export const initializeSalaryCronJobs = async () => {
+  try {
+    const config = await SalaryConfig.findOne();
+    if (!config) {
+      console.log('No salary configuration found. Please set up salary configuration first.');
+      return;
+    }
+
+    // Clear any existing cron jobs
+    cron.getTasks().forEach(task => task.stop());
+
+    if (config.auto_generate) {
+      if (config.schedule_type === 'weekly') {
+        // Weekly salary generation (runs at configured day and time)
+        const dayOfWeek = config.payment_day;
+        const [hours, minutes] = config.payment_time.split(':');
+
+        cron.schedule(`${minutes} ${hours} * * ${dayOfWeek}`, async () => {
+          console.log(`Running weekly salary generation at ${config.payment_time} on ${config.payment_day_name}`);
+          await generateWeeklySalaries();
+        }, {
+          timezone: config.timezone
+        });
+      } else {
+        // Monthly salary generation (runs at configured day and time)
+        const dayOfMonth = config.payment_day;
+        const [hours, minutes] = config.payment_time.split(':');
+
+        cron.schedule(`${minutes} ${hours} ${dayOfMonth} * *`, async () => {
+          console.log(`Running monthly salary generation at ${config.payment_time} on day ${dayOfMonth}`);
+          await generateMonthlySalaries();
+        }, {
+          timezone: config.timezone
+        });
+      }
+      console.log('Salary generation cron jobs initialized successfully');
+    } else {
+      console.log('Automatic salary generation is disabled in configuration');
+    }
+  } catch (error) {
+    console.error('Error initializing salary cron jobs:', error);
+    throw error;
   }
 };

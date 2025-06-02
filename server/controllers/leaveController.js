@@ -93,19 +93,27 @@ const addLeave = async (req, res) => {
             });
         }
 
-        // Check leave balance
-        const approvedLeaves = await Leave.find({
-            employee_id: employee._id,
-            leave_setup_id,
-            status: "Approved"
-        });
-
-        const consumedDays = approvedLeaves.reduce((sum, leave) => sum + leave.numOfDays, 0);
-        const remainingDays = leaveSetup.maxDays - consumedDays;
-
         let excessDays = 0;
-        if (numOfDays > remainingDays) {
-            excessDays = numOfDays - remainingDays;
+        let remainingDays = 0;
+
+        // Only check leave balance if the leave type has restrictions
+        if (!leaveSetup.noRestrictions) {
+            // Check leave balance
+            const approvedLeaves = await Leave.find({
+                employee_id: employee._id,
+                leave_setup_id,
+                status: "Approved"
+            });
+
+            const consumedDays = approvedLeaves.reduce((sum, leave) => sum + leave.numOfDays, 0);
+            remainingDays = leaveSetup.maxDays - consumedDays;
+
+            if (numOfDays > remainingDays) {
+                excessDays = numOfDays - remainingDays;
+            }
+        } else {
+            // For leaves with no restrictions, all days are considered excess days for salary deduction
+            excessDays = numOfDays;
         }
 
         // Create new leave
@@ -118,7 +126,7 @@ const addLeave = async (req, res) => {
             endDate: new Date(endDate),
             reason,
             numOfDays,
-            excessDays,
+            excessDays: leaveSetup.deductSalary ? numOfDays : excessDays, // If deductSalary is true, all days are excess days
             status: "Pending"
         });
 
@@ -128,7 +136,10 @@ const addLeave = async (req, res) => {
             success: true,
             message: "Leave request submitted successfully",
             leave: newLeave,
-            remainingDays: remainingDays - numOfDays
+            remainingDays: leaveSetup.noRestrictions ? 'Unlimited' : remainingDays - numOfDays,
+            willDeductSalary: leaveSetup.deductSalary,
+            leaveType: leaveSetup.leaveType,
+            noRestrictions: leaveSetup.noRestrictions
         });
 
     } catch (error) {
@@ -168,15 +179,17 @@ const getLeaveHistory = async (req, res) => {
         }).sort({ startDate: -1 });
 
         const consumedDays = leaves.reduce((sum, leave) => sum + leave.numOfDays, 0);
-        const remainingDays = leaveSetup.maxDays - consumedDays;
+        const remainingDays = leaveSetup.noRestrictions ? 'Unlimited' : leaveSetup.maxDays - consumedDays;
 
         return res.status(200).json({
             success: true,
             leaves,
             consumedDays,
             remainingDays,
-            maxDays: leaveSetup.maxDays,
-            leaveType: leaveSetup.leaveType
+            maxDays: leaveSetup.noRestrictions ? 'Unlimited' : leaveSetup.maxDays,
+            leaveType: leaveSetup.leaveType,
+            deductSalary: leaveSetup.deductSalary,
+            noRestrictions: leaveSetup.noRestrictions
         });
 
     } catch (error) {
@@ -700,7 +713,7 @@ const getDesignationLeaveStats = async (req, res) => {
             },
             {
                 $group: {
-                    _id: '$designation.designation_name',
+                    _id: '$designation.title',
                     count: { $sum: 1 }
                 }
             },

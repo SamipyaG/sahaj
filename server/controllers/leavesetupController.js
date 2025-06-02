@@ -13,14 +13,22 @@ const getLeaveSetups = async (req, res) => {
 // Add a new leave setup
 const addLeaveSetup = async (req, res) => {
     try {
-        const { leaveType, maxDays, description } = req.body;
-        console.log(leaveType,maxDays,description)
+        const { leaveType, maxDays, description, deductSalary, noRestrictions } = req.body;
+        console.log("Received data:", { leaveType, maxDays, description, deductSalary, noRestrictions });
 
         // Validate required fields
-        if (!leaveType || !maxDays) {
-            return res.status(400).json({ 
-                success: false, 
-                error: "Leave type and max days are required" 
+        if (!leaveType) {
+            return res.status(400).json({
+                success: false,
+                error: "Leave type is required"
+            });
+        }
+
+        // If noRestrictions is true, maxDays is not required
+        if (!noRestrictions && !maxDays) {
+            return res.status(400).json({
+                success: false,
+                error: "Max days is required for restricted leave types"
             });
         }
 
@@ -31,16 +39,19 @@ const addLeaveSetup = async (req, res) => {
         }
 
         // Create new leave setup
-        const newLeaveSetup = new LeaveSetup({ 
+        const newLeaveSetup = new LeaveSetup({
             leaveType,
-            maxDays,
-            description: description || "" // Default to empty string if not provided
+            maxDays: noRestrictions ? 0 : maxDays,
+            description: description || "",
+            deductSalary: deductSalary || false,
+            noRestrictions: noRestrictions || false
         });
 
         await newLeaveSetup.save();
         return res.status(201).json({ success: true, leaveSetup: newLeaveSetup });
 
     } catch (error) {
+        console.error("Error in addLeaveSetup:", error);
         return res.status(500).json({ success: false, error: "Error adding leave setup: " + error.message });
     }
 };
@@ -65,17 +76,31 @@ const getLeaveSetup = async (req, res) => {
 const updateLeaveSetup = async (req, res) => {
     try {
         const { id } = req.params;
-        const { leaveType, maxDays, description } = req.body;
+        const { leaveType, maxDays, description, deductSalary, noRestrictions } = req.body;
 
         // Validate required fields
-        if (!leaveType || !maxDays) {
-            return res.status(400).json({ success: false, error: "Leave type and max days are required" });
+        if (!leaveType) {
+            return res.status(400).json({ success: false, error: "Leave type is required" });
+        }
+
+        // If noRestrictions is true, maxDays is not required
+        if (!noRestrictions && !maxDays) {
+            return res.status(400).json({
+                success: false,
+                error: "Max days is required for restricted leave types"
+            });
         }
 
         const updatedLeaveSetup = await LeaveSetup.findByIdAndUpdate(
             id,
-            { leaveType, maxDays, description },
-            { new: true, runValidators: true } // Return updated document and run schema validators
+            {
+                leaveType,
+                maxDays: noRestrictions ? 0 : maxDays,
+                description,
+                deductSalary: deductSalary || false,
+                noRestrictions: noRestrictions || false
+            },
+            { new: true, runValidators: true }
         );
 
         if (!updatedLeaveSetup) {
@@ -104,10 +129,10 @@ const deleteLeaveSetup = async (req, res) => {
     }
 };
 
-export { 
-    addLeaveSetup, 
-    getLeaveSetups, 
-    getLeaveSetup, 
-    updateLeaveSetup, 
-    deleteLeaveSetup 
+export {
+    addLeaveSetup,
+    getLeaveSetups,
+    getLeaveSetup,
+    updateLeaveSetup,
+    deleteLeaveSetup
 };
