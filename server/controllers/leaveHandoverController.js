@@ -55,9 +55,24 @@ const createLeaveHandover = async (req, res) => {
       });
     }
 
-    // Check if leave is active
+    // Debug logging for date comparison
     const currentDate = new Date();
-    if (currentDate < leave.startDate || currentDate > leave.endDate) {
+    const startDate = new Date(leave.startDate);
+    const endDate = new Date(leave.endDate);
+
+    // Set time to start of day for all dates
+    currentDate.setHours(0, 0, 0, 0);
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(0, 0, 0, 0);
+
+    console.log('Current Date:', currentDate);
+    console.log('Leave Start Date:', startDate);
+    console.log('Leave End Date:', endDate);
+    console.log('Is current date before start?', currentDate < startDate);
+    console.log('Is current date after end?', currentDate > endDate);
+
+    // Check if leave is active
+    if (currentDate < startDate || currentDate > endDate) {
       return res.status(400).json({
         success: false,
         error: "Can only create handover during active leave period"

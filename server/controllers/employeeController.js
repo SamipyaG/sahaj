@@ -22,6 +22,19 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 });
 
+// Helper function to calculate age
+const calculateAge = (dateOfBirth) => {
+  const dob = new Date(dateOfBirth);
+  const today = new Date();
+  const age = today.getFullYear() - dob.getFullYear();
+  const monthDiff = today.getMonth() - dob.getMonth();
+
+  // Adjust age if birthday hasn't occurred this year
+  return monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())
+    ? age - 1
+    : age;
+};
+
 // Helper function to safely populate employee data
 const populateEmployeeData = async (employee) => {
   if (!employee) return null;
@@ -81,20 +94,19 @@ const addEmployee = async (req, res) => {
 
     // Validate age if date_of_birth is provided
     if (req.body.date_of_birth) {
-      const dob = new Date(req.body.date_of_birth);
-      const today = new Date();
-      const age = today.getFullYear() - dob.getFullYear();
-      const monthDiff = today.getMonth() - dob.getMonth();
+      const age = calculateAge(req.body.date_of_birth);
 
-      // Adjust age if birthday hasn't occurred this year
-      const adjustedAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())
-        ? age - 1
-        : age;
-
-      if (adjustedAge < 21) {
+      if (age < 21) {
         return res.status(400).json({
           success: false,
           error: "Employee must be at least 21 years old"
+        });
+      }
+
+      if (age > 60) {
+        return res.status(400).json({
+          success: false,
+          error: "Employee cannot be older than 60 years"
         });
       }
     }
@@ -289,20 +301,19 @@ const updateEmployee = async (req, res) => {
 
     // Validate age if date_of_birth is being updated
     if (updates.date_of_birth) {
-      const dob = new Date(updates.date_of_birth);
-      const today = new Date();
-      const age = today.getFullYear() - dob.getFullYear();
-      const monthDiff = today.getMonth() - dob.getMonth();
+      const age = calculateAge(updates.date_of_birth);
 
-      // Adjust age if birthday hasn't occurred this year
-      const adjustedAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())
-        ? age - 1
-        : age;
-
-      if (adjustedAge < 21) {
+      if (age < 21) {
         return res.status(400).json({
           success: false,
           error: "Employee must be at least 21 years old"
+        });
+      }
+
+      if (age > 60) {
+        return res.status(400).json({
+          success: false,
+          error: "Employee cannot be older than 60 years"
         });
       }
     }

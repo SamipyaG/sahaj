@@ -17,11 +17,11 @@ const EmployeeSalaryView = () => {
             Authorization: `Bearer ${token}`
           }
         });
-        setSalaries(response.data.data.docs || []);
+        setSalaries(response.data.data);
         setLoading(false);
       } catch (err) {
         console.error('Error fetching salaries:', err);
-        setError(err.response?.data?.error || 'Failed to fetch salary records');
+        setError(err.response?.data?.error || 'Failed to fetch salary data');
         setLoading(false);
       }
     };
@@ -31,48 +31,49 @@ const EmployeeSalaryView = () => {
 
   if (loading) {
     return (
-      <div className="d-flex justify-content-center align-items-center" style={{ height: '200px' }}>
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </div>
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="alert alert-danger" role="alert">
-        {error}
+      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+        <strong className="font-bold">Error!</strong>
+        <span className="block sm:inline"> {error}</span>
       </div>
     );
   }
 
   return (
-    <div className="container mt-4">
-      <h2>Salary History</h2>
-      <div className="table-responsive">
-        <table className="table table-striped">
+    <div className="container mx-auto px-4 py-8">
+      <h2 className="text-2xl font-bold mb-6">Salary History</h2>
+      <div className="overflow-x-auto">
+        <table className="min-w-full bg-white border border-gray-300">
           <thead>
-            <tr>
-              <th>Type</th>
-              <th>Basic Salary</th>
-              <th>Allowances</th>
-              <th>Tax</th>
-              <th>Leave Deduction</th>
-              <th>Net Salary</th>
-              <th>Pay Date</th>
+            <tr className="bg-gray-100">
+              <th className="px-6 py-3 border-b text-left">Type</th>
+              <th className="px-6 py-3 border-b text-left">Basic Salary</th>
+              <th className="px-6 py-3 border-b text-left">Allowances</th>
+              <th className="px-6 py-3 border-b text-left">Tax</th>
+              <th className="px-6 py-3 border-b text-left">Leave Deduction</th>
+              <th className="px-6 py-3 border-b text-left">Net Salary</th>
+              <th className="px-6 py-3 border-b text-left">Pay Date</th>
             </tr>
           </thead>
           <tbody>
             {salaries.map((salary) => (
-              <tr key={salary._id}>
-                <td className="text-capitalize">{salary.salary_type}</td>
-                <td>₹{salary.basic_salary?.toLocaleString() || 0}</td>
-                <td>₹{salary.allowances?.toLocaleString() || 0}</td>
-                <td>₹{salary.tax?.toLocaleString() || 0}</td>
-                <td>₹{salary.leave_deduction?.toLocaleString() || 0}</td>
-                <td>₹{salary.gross_salary?.toLocaleString() || 0}</td>
-                <td>{new Date(salary.pay_date).toLocaleDateString()}</td>
+              <tr key={salary._id} className="hover:bg-gray-50">
+                <td className="px-6 py-4 border-b">{salary.salary_type}</td>
+                <td className="px-6 py-4 border-b">₹{salary.basic_salary?.toLocaleString() || 0}</td>
+                <td className="px-6 py-4 border-b">₹{salary.allowances?.toLocaleString() || 0}</td>
+                <td className="px-6 py-4 border-b">₹{salary.tax?.toLocaleString() || 0}</td>
+                <td className="px-6 py-4 border-b">₹{salary.leave_deduction?.toLocaleString() || 0}</td>
+                <td className="px-6 py-4 border-b">₹{salary.net_salary?.toLocaleString() || 0}</td>
+                <td className="px-6 py-4 border-b">
+                  {new Date(salary.pay_date).toLocaleDateString()}
+                </td>
               </tr>
             ))}
           </tbody>
